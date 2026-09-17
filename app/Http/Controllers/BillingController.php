@@ -3,20 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\CreditService;
 use App\Services\RazorpayService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class BillingController extends Controller
 {
-    private array $plans = [
-        'STARTER' => ['name' => 'Starter', 'price' => 999, 'features' => ['1 GBP location', 'Reviews + AI reply', 'Photo posting']],
-        'GROWTH' => ['name' => 'Growth', 'price' => 2999, 'features' => ['Multiple GBP', 'Social posting', 'Lead CRM']],
-        'AGENCY' => ['name' => 'Agency', 'price' => 9999, 'features' => ['Unlimited clients', 'Ads reporting', 'White label']],
-    ];
-
     public function __construct(private RazorpayService $razorpay, private CreditService $credits) {}
+
+    private function activePlans()
+    {
+        return Plan::where('is_active', true)->orderBy('sort')->orderBy('price')->get();
+    }
+
+    private function plan(string $code): ?Plan
+    {
+        return Plan::where('code', $code)->first();
+    }
+
+    private function canManage(Request $request): bool
+    {
+        return in_array($request->user()->role, ['SUPER_ADMIN', 'CLIENT_OWNER'], true);
+    }
 
     public function credits(Request $request)
     {
@@ -35,42 +46,38 @@ class BillingController extends Controller
         return view('dashboard.credits', compact('sub', 'creditBalance', 'usageThisMonth', 'creditCosts', 'planCredits', 'ledger'));
     }
 
-    /** User-facing plans page (self-serve upgrade). */
+    /** User-facing plans page (self-serve upgrade), driven by DB plans. */
     public function plans(Request $request)
     {
         $agencyId = $request->user()->agency_id;
         $sub = Subscription::where('agency_id', $agencyId)->first();
-        $plans = $this->plans;
-        $planCredits = CreditService::PLAN_CREDITS;
+        $plans = $this->activePlans();
         $creditBalance = $this->credits->balance($agencyId);
         $razorpayReady = $this->razorpay->configured();
-        $canManage = in_array($request->user()->role, ['AGENCY_OWNER', 'SUPER_ADMIN'], true);
+        $canManage = $this->canManage($request);
 
-        return view('dashboard.plans', compact('plans', 'sub', 'planCredits', 'creditBalance', 'razorpayReady', 'canManage'));
+        return view('dashboard.plans', compact('plans', 'sub', 'creditBalance', 'razorpayReady', 'canManage'));
     }
 
-    /** Activate/switch the plan and allocate its monthly credits. */
+    /** Instant activation (demo mode / no gateway). */
     public function upgrade(Request $request)
     {
-        abort_unless(
-            in_array($request->user()->role, ['AGENCY_OWNER', 'SUPER_ADMIN'], true),
-            403,
-            'Only the account owner can change the plan.'
-        );
+        abort_unless($this->canManage($request), 403, 'You are not allowed to change the plan.');
 
-        $data = $request->validate(['plan' => 'required|in:STARTER,GROWTH,AGENCY']);
+        $data = $request->validate(['plan' => ['required', Rule::exists('plans', 'code')]]);
         $agencyId = $request->user()->agency_id;
+        $plan = $this->plan($data['plan']);
 
         Subscription::updateOrCreate(
             ['agency_id' => $agencyId],
-            ['plan' => $data['plan'], 'status' => 'ACTIVE', 'renews_at' => now()->addMonth()]
+            ['plan' => $plan->code, 'status' => 'ACTIVE', 'renews_at' => now()->addMonth()]
         );
 
-        $this->credits->resetMonthly($agencyId, $data['plan']);
+        $this->credits->setMonthly($agencyId, $plan->code, $plan->credits);
 
         return redirect()->route('plans')->with(
             'success',
-            "You're now on the {$this->plans[$data['plan']]['name']} plan — ".number_format(CreditService::PLAN_CREDITS[$data['plan']]).' AI credits allocated.'
+            "You're now on the {$plan->name} plan — ".number_format($plan->credits).' AI credits allocated.'
         );
     }
 
@@ -96,28 +103,22 @@ class BillingController extends Controller
     {
         $agencyId = $request->user()->agency_id;
         $sub = Subscription::where('agency_id', $agencyId)->first();
-        $payments = Payment::where('agency_id', $agencyId)->latest()->take(10)->get();
-        $plans = $this->plans;
-        $razorpayKey = config('services.razorpay.key');
+        $payments = Payment::where('agency_id', $agencyId)->latest()->take(15)->get();
         $razorpayReady = $this->razorpay->configured();
 
         $creditBalance = $this->credits->balance($agencyId);
         $usageThisMonth = $this->credits->usageThisMonth($agencyId);
         $creditCosts = CreditService::COSTS;
-        $planCredits = CreditService::PLAN_CREDITS;
 
-        return view('admin.billing', compact('sub', 'plans', 'payments', 'razorpayKey', 'razorpayReady', 'creditBalance', 'usageThisMonth', 'creditCosts', 'planCredits'));
+        return view('admin.billing', compact('sub', 'payments', 'razorpayReady', 'creditBalance', 'usageThisMonth', 'creditCosts'));
     }
 
-    /**
-     * Step 1: create a Razorpay order for the chosen plan.
-     * Returns JSON the frontend uses to open Razorpay Checkout.
-     */
+    /** Step 1: create a Razorpay order for the chosen plan (GST-inclusive price). */
     public function checkout(Request $request)
     {
-        abort_unless(in_array($request->user()->role, ['AGENCY_OWNER', 'SUPER_ADMIN'], true), 403, 'Only the account owner can change the plan.');
-        $data = $request->validate(['plan' => 'required|in:STARTER,GROWTH,AGENCY']);
-        $plan = $this->plans[$data['plan']];
+        abort_unless($this->canManage($request), 403, 'You are not allowed to change the plan.');
+        $data = $request->validate(['plan' => ['required', Rule::exists('plans', 'code')]]);
+        $plan = $this->plan($data['plan']);
 
         if (! $this->razorpay->configured()) {
             return response()->json(['error' => 'Razorpay keys missing in .env'], 422);
@@ -126,16 +127,15 @@ class BillingController extends Controller
         $agencyId = $request->user()->agency_id;
         $receipt = 'rf_'.$agencyId.'_'.time();
 
-        $order = $this->razorpay->createOrder($plan['price'], $receipt);
+        $order = $this->razorpay->createOrder($plan->price, $receipt);
         if (! $order) {
             return response()->json(['error' => 'Could not create order. Check keys / logs.'], 422);
         }
 
-        // Record a pending payment.
         Payment::create([
             'agency_id' => $agencyId,
-            'plan' => $data['plan'],
-            'amount' => $plan['price'] * 100,
+            'plan' => $plan->code,
+            'amount' => $plan->price * 100,
             'currency' => 'INR',
             'razorpay_order_id' => $order['id'],
             'status' => 'CREATED',
@@ -145,24 +145,21 @@ class BillingController extends Controller
             'order_id' => $order['id'],
             'amount' => $order['amount'],
             'currency' => $order['currency'],
-            'plan' => $data['plan'],
-            'plan_name' => $plan['name'],
+            'plan' => $plan->code,
+            'plan_name' => $plan->name,
             'key' => config('services.razorpay.key'),
         ]);
     }
 
-    /**
-     * Step 2: after payment, frontend posts back the ids + signature.
-     * We verify, then activate the plan.
-     */
+    /** Step 2: verify the payment signature, then activate the plan. */
     public function verify(Request $request)
     {
-        abort_unless(in_array($request->user()->role, ['AGENCY_OWNER', 'SUPER_ADMIN'], true), 403, 'Only the account owner can change the plan.');
+        abort_unless($this->canManage($request), 403, 'You are not allowed to change the plan.');
         $data = $request->validate([
             'razorpay_order_id' => 'required|string',
             'razorpay_payment_id' => 'required|string',
             'razorpay_signature' => 'required|string',
-            'plan' => 'required|in:STARTER,GROWTH,AGENCY',
+            'plan' => ['required', Rule::exists('plans', 'code')],
         ]);
 
         $ok = $this->razorpay->verifySignature(
@@ -186,13 +183,14 @@ class BillingController extends Controller
         }
 
         $agencyId = $request->user()->agency_id;
+        $plan = $this->plan($data['plan']);
 
         Subscription::updateOrCreate(
             ['agency_id' => $agencyId],
-            ['plan' => $data['plan'], 'status' => 'ACTIVE', 'provider' => 'razorpay', 'renews_at' => now()->addMonth()]
+            ['plan' => $plan->code, 'status' => 'ACTIVE', 'provider' => 'razorpay', 'renews_at' => now()->addMonth()]
         );
 
-        $this->credits->resetMonthly($agencyId, $data['plan']);
+        $this->credits->setMonthly($agencyId, $plan->code, $plan->credits);
 
         return response()->json(['success' => true]);
     }

@@ -75,6 +75,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/plans/checkout', [BillingController::class, 'checkout'])->name('plans.checkout');
     Route::post('/plans/verify', [BillingController::class, 'verify'])->name('plans.verify');
 
+    // Client team management (Client Owner adds Staff / Marketing Managers)
+    Route::get('/team', [\App\Http\Controllers\TeamController::class, 'index'])->name('team');
+    Route::post('/team', [\App\Http\Controllers\TeamController::class, 'store'])->name('team.store');
+    Route::delete('/team/{user}', [\App\Http\Controllers\TeamController::class, 'destroy'])->name('team.destroy');
+
+    // Client billing (subscription payment history + PDF invoices)
+    Route::get('/billing', [\App\Http\Controllers\ClientBillingController::class, 'index'])->name('client-billing');
+    Route::get('/billing/invoice/{payment}', [\App\Http\Controllers\ClientBillingController::class, 'invoice'])->name('client-billing.invoice');
+
     // Email verification
     Route::post('/email/send-verification', [App\Http\Controllers\EmailVerificationController::class, 'send'])->name('verification.send');
     Route::post('/email/change', [App\Http\Controllers\EmailVerificationController::class, 'changeEmail'])->name('email.change');
@@ -212,4 +221,10 @@ Route::middleware(['auth', 'role:SUPER_ADMIN'])->prefix('admin')->name('admin.')
     Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
     Route::post('/billing/verify', [BillingController::class, 'verify'])->name('billing.verify');
     Route::post('/billing/topup', [BillingController::class, 'topup'])->name('billing.topup');
+
+    // Plans management (create/edit plans, per-plan access, GST)
+    Route::get('/plans', [\App\Http\Controllers\PlanController::class, 'index'])->name('plans');
+    Route::post('/plans', [\App\Http\Controllers\PlanController::class, 'store'])->name('plans.store');
+    Route::post('/plans/{plan}', [\App\Http\Controllers\PlanController::class, 'update'])->name('plans.update');
+    Route::delete('/plans/{plan}', [\App\Http\Controllers\PlanController::class, 'destroy'])->name('plans.destroy');
 });

@@ -162,8 +162,8 @@ a{text-decoration:none;color:inherit;}
 
 <section class="hero">
     <div>
-        <div class="hero-badge">Trusted by 1,000+ local businesses</div>
-        <h1>Dominate Local Search.<br>Automate Reviews.<br><span class="accent">Grow Revenue.</span></h1>
+        <div class="hero-badge">Reviews → Customers → Growth</div>
+        <h1>Your reputation.<br><span class="accent">Your growth.</span></h1>
         <p>ReviewFlow helps multi-location businesses manage Google Business Profiles, reviews, rankings, and local reputation from one AI-powered dashboard.</p>
         <div class="hero-btns">
             <a href="<?php echo e(route('register')); ?>" class="btn-primary">Get Started Free</a>

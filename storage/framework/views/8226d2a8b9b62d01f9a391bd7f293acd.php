@@ -63,10 +63,11 @@
         /* === Layout === */
         .layout{display:flex;min-height:calc(100vh - 52px);}
         .sidebar{width:240px;border-right:1px solid var(--line);background:var(--card);padding:16px 14px;display:flex;flex-direction:column;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;}
-        .brand{display:flex;align-items:center;gap:10px;padding:0 8px 6px;}
-        .brand-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4c6fff,#6b8afd);color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 4px 12px rgba(76,111,255,.3);}
-        .brand strong{font-size:16px;display:block;line-height:1.1;}
-        .brand span{font-size:11px;color:var(--muted);}
+        .brand{display:flex;align-items:center;gap:11px;padding:4px 12px 12px;}
+        .brand-logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4c6fff,#6b8afd);color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px;box-shadow:0 4px 12px rgba(76,111,255,.3);flex-shrink:0;}
+        .brand .brand-txt{min-width:0;line-height:1.15;}
+        .brand strong{font-size:16px;display:block;font-weight:800;letter-spacing:-.01em;}
+        .brand span{font-size:11px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
         .nav-label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:18px 12px 6px;}
         .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--ink);margin-bottom:2px;transition:background .12s;}
         .nav-item:hover{background:#eef1f8;}
@@ -266,7 +267,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="brand">
             <div class="brand-logo">R</div>
-            <div>
+            <div class="brand-txt">
                 <strong>ReviewFlow</strong>
                 <span><?php echo e(auth()->user()->name); ?></span>
             </div>
@@ -277,6 +278,9 @@
         <a href="<?php echo e(route('optimize')); ?>" class="nav-item <?php echo e(request()->routeIs('optimize') ? 'active' : ''); ?>"><span class="ic">&#9889;</span> One-Click Optimize</a>
         <a href="<?php echo e(route('ai')); ?>" class="nav-item <?php echo e(request()->routeIs('ai') ? 'active' : ''); ?>"><span class="ic">&#10022;</span> AI Mode</a>
         <a href="<?php echo e(route('clients')); ?>" class="nav-item <?php echo e(request()->routeIs('clients') || request()->routeIs('clients.show') ? 'active' : ''); ?>"><span class="ic">&#127970;</span> Clients</a>
+        <?php if(auth()->user()->role === 'CLIENT_OWNER'): ?>
+        <a href="<?php echo e(route('team')); ?>" class="nav-item <?php echo e(request()->routeIs('team') ? 'active' : ''); ?>"><span class="ic">&#128101;</span> My Team</a>
+        <?php endif; ?>
         <a href="<?php echo e(route('reviews')); ?>" class="nav-item <?php echo e(request()->routeIs('reviews') || request()->routeIs('reviews.show') ? 'active' : ''); ?>"><span class="ic">&#9733;</span> Reviews</a>
         <a href="<?php echo e(route('gbp-content')); ?>" class="nav-item <?php echo e(request()->routeIs('gbp-content') ? 'active' : ''); ?>"><span class="ic">&#128444;</span> Posts & Photos</a>
         <a href="<?php echo e(route('ai-media')); ?>" class="nav-item <?php echo e(request()->routeIs('ai-media') ? 'active' : ''); ?>"><span class="ic">&#127912;</span> AI Generated Media</a>
@@ -291,6 +295,7 @@
 
         <div class="nav-label">Billing</div>
         <a href="<?php echo e(route('plans')); ?>" class="nav-item <?php echo e(request()->routeIs('plans') ? 'active' : ''); ?>"><span class="ic">&#11014;</span> Plans &amp; Upgrade</a>
+        <a href="<?php echo e(route('client-billing')); ?>" class="nav-item <?php echo e(request()->routeIs('client-billing') ? 'active' : ''); ?>"><span class="ic">&#128179;</span> Billing &amp; Invoices</a>
         <a href="<?php echo e(route('credits')); ?>" class="nav-item <?php echo e(request()->routeIs('credits') ? 'active' : ''); ?>"><span class="ic">&#9889;</span> Credits</a>
         <a href="<?php echo e(route('invoices')); ?>" class="nav-item <?php echo e(request()->routeIs('invoices') || request()->routeIs('invoices.*') ? 'active' : ''); ?>"><span class="ic">&#129534;</span> Invoices</a>
         <a href="<?php echo e(route('customers')); ?>" class="nav-item <?php echo e(request()->routeIs('customers') ? 'active' : ''); ?>"><span class="ic">&#128101;</span> Customers</a>

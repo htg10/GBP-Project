@@ -48,7 +48,7 @@ class AuthController extends Controller
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => $data['password'],
-            'role' => 'AGENCY_OWNER',
+            'role' => 'SUPER_ADMIN',
         ]);
 
         Subscription::create(['agency_id' => $agency->id, 'plan' => 'STARTER', 'status' => 'TRIALING']);
@@ -111,7 +111,7 @@ class AuthController extends Controller
             'name' => $googleUser->getName(),
             'email' => $googleUser->getEmail(),
             'password' => Hash::make(Str::random(24)),
-            'role' => 'AGENCY_OWNER',
+            'role' => 'SUPER_ADMIN',
             'avatar' => $googleUser->getAvatar(),
         ]);
 

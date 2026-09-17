@@ -47,7 +47,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:SUPER_ADMIN,AGENCY_OWNER,CLIENT_OWNER,MARKETING_MANAGER,STAFF',
+            'role' => 'required|in:SUPER_ADMIN,CLIENT_OWNER,MARKETING_MANAGER,STAFF',
             'client_id' => 'nullable|exists:clients,id',
         ]);
         if (User::where('email', $data['email'])->exists()) {
@@ -65,7 +65,7 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email',
-            'role' => 'required|in:SUPER_ADMIN,AGENCY_OWNER,CLIENT_OWNER,MARKETING_MANAGER,STAFF',
+            'role' => 'required|in:SUPER_ADMIN,CLIENT_OWNER,MARKETING_MANAGER,STAFF',
             'password' => 'nullable|string|min:8',
             'client_id' => 'nullable|exists:clients,id',
         ]);

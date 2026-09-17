@@ -1,10 +1,10 @@
 @extends('layouts.admin')
 @section('title', 'Billing')
 @section('content')
-<div class="page-head"><h1>Billing</h1><p>Choose a plan and pay securely via Razorpay.</p></div>
+<div class="page-head"><h1>Billing</h1><p>Subscription status, credits, and payment history.</p></div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px;">
-    <div style="background:var(--teal-soft);border:1px solid #cfe6e0;border-radius:12px;padding:14px 18px;font-size:14px;">
+    <div style="background:var(--teal-soft);border:1px solid #d5deff;border-radius:12px;padding:14px 18px;font-size:14px;">
         Plan: <strong>{{ $sub->plan ?? 'None' }}</strong>
         @if($sub)<span style="margin-left:6px;font-size:12px;color:var(--teal-ink);">({{ $sub->status }})</span>@endif
     </div>
@@ -14,35 +14,13 @@
             <span style="font-size:12px;color:var(--muted);">/ {{ number_format($sub->monthly_credits) }} monthly</span>
         @endif
     </div>
+    <a href="{{ route('admin.plans') }}" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;font-size:14px;display:flex;align-items:center;justify-content:space-between;">
+        Manage Plans <span>→</span>
+    </a>
 </div>
 
-@if(!$razorpayReady)
-    <div class="alert error" style="margin-bottom:18px;">
-        Razorpay keys missing. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your .env to enable payments.
-    </div>
-@endif
-
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;">
-    @foreach($plans as $id=>$p)
-        @php $active = ($sub->plan ?? null) === $id; @endphp
-        <div class="card" style="{{ $active ? 'border:2px solid var(--teal);' : '' }}">
-            <div style="font-size:16px;font-weight:700;">{{ $p['name'] }}</div>
-            <div style="font-size:20px;font-weight:700;color:var(--teal);margin:6px 0 4px;">₹{{ number_format($p['price']) }}/mo</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">{{ number_format($planCredits[$id] ?? 0) }} AI credits/mo</div>
-            <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-                @foreach($p['features'] as $f)<li style="font-size:13px;color:#3a4a45;">✓ {{ $f }}</li>@endforeach
-            </ul>
-            @if($active)
-                <button class="btn" style="width:100%;background:transparent;border:1px solid var(--line);color:var(--muted);justify-content:center;" disabled>Current plan</button>
-            @else
-                <button class="btn pay-btn" style="width:100%;justify-content:center;" data-plan="{{ $id }}" {{ $razorpayReady ? '' : 'disabled' }}>Subscribe →</button>
-            @endif
-        </div>
-    @endforeach
-</div>
-
-{{-- Admin credit top-up --}}
-<div class="card" style="margin-top:22px;max-width:420px;">
+{{-- Manual credit top-up --}}
+<div class="card" style="max-width:440px;">
     <strong style="font-size:14px;">Manual credit top-up</strong>
     <form method="POST" action="{{ route('admin.billing.topup') }}" style="display:flex;gap:10px;align-items:flex-end;margin-top:10px;">
         @csrf
@@ -72,64 +50,4 @@
         </div>
     </div>
 @endif
-
-@push('scripts')
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script>
-const csrf = document.querySelector('meta[name=csrf-token]').content;
-
-document.querySelectorAll('.pay-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-        const plan = btn.dataset.plan;
-        btn.textContent = 'Please wait…'; btn.disabled = true;
-
-        try {
-            // Step 1: create order on our server
-            const res = await fetch("{{ route('admin.billing.checkout') }}", {
-                method: 'POST',
-                headers: {'X-CSRF-TOKEN': csrf, 'Content-Type': 'application/json'},
-                body: JSON.stringify({plan})
-            });
-            const data = await res.json();
-            if (data.error) { alert(data.error); btn.textContent = 'Subscribe →'; btn.disabled = false; return; }
-
-            // Step 2: open Razorpay checkout
-            const options = {
-                key: data.key,
-                amount: data.amount,
-                currency: data.currency,
-                name: 'ReviewFlow',
-                description: data.plan_name + ' plan',
-                order_id: data.order_id,
-                theme: {color: '#0f6b5c'},
-                handler: async function (response) {
-                    // Step 3: verify on our server
-                    const vr = await fetch("{{ route('admin.billing.verify') }}", {
-                        method: 'POST',
-                        headers: {'X-CSRF-TOKEN': csrf, 'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            plan: plan
-                        })
-                    });
-                    const vd = await vr.json();
-                    if (vd.success) { alert('Payment successful! Plan activated.'); location.reload(); }
-                    else { alert(vd.error || 'Verification failed'); }
-                },
-                modal: {
-                    ondismiss: function () { btn.textContent = 'Subscribe →'; btn.disabled = false; }
-                }
-            };
-            const rzp = new Razorpay(options);
-            rzp.open();
-        } catch (e) {
-            alert('Something went wrong. Check console.');
-            btn.textContent = 'Subscribe →'; btn.disabled = false;
-        }
-    });
-});
-</script>
-@endpush
 @endsection

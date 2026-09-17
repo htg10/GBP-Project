@@ -81,6 +81,7 @@
         <div class="nav-label">Manage</div>
         <a href="<?php echo e(route('admin.overview')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.overview') ? 'active' : ''); ?>">▦ Overview</a>
         <a href="<?php echo e(route('admin.users')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.users') ? 'active' : ''); ?>">◉ Users</a>
+        <a href="<?php echo e(route('admin.plans')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.plans') ? 'active' : ''); ?>">▤ Plans</a>
         <a href="<?php echo e(route('admin.billing')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.billing') ? 'active' : ''); ?>">▭ Billing</a>
         <div class="nav-spacer"></div>
         <a href="<?php echo e(route('dashboard')); ?>" class="back">⇄ User view</a>

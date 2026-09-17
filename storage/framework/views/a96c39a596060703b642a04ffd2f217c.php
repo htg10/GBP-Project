@@ -4,7 +4,7 @@
     <div class="page-head" style="margin:0;"><h1>Users</h1><p>Create and manage everyone on your platform.</p></div>
     <button class="btn" onclick="openModal()">+ New user</button>
 </div>
-<?php $labels=['SUPER_ADMIN'=>'Super Admin','AGENCY_OWNER'=>'Agency Owner','CLIENT_OWNER'=>'Client Owner','MARKETING_MANAGER'=>'Marketing Manager','STAFF'=>'Staff']; ?>
+<?php $labels=['SUPER_ADMIN'=>'Super Admin','CLIENT_OWNER'=>'Client Owner','MARKETING_MANAGER'=>'Marketing Manager','STAFF'=>'Staff']; ?>
 <div class="card" style="padding:0;overflow:hidden;">
     <table>
         <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Scoped to client</th><th style="text-align:right;">Actions</th></tr></thead>

@@ -99,6 +99,30 @@ class CreditService
     }
 
     /**
+     * Allocate a plan's monthly credits (DB-plan driven). Used when a Super
+     * Admin's custom plan is activated.
+     */
+    public function setMonthly(int $agencyId, string $planCode, int $credits): void
+    {
+        $sub = Subscription::where('agency_id', $agencyId)->first();
+        if (!$sub) return;
+
+        $sub->update([
+            'credit_balance' => $credits,
+            'monthly_credits' => $credits,
+            'credits_reset_at' => now(),
+        ]);
+
+        CreditLedger::create([
+            'agency_id' => $agencyId,
+            'amount' => $credits,
+            'balance_after' => $credits,
+            'action' => 'monthly_reset',
+            'description' => "{$planCode} plan — ".number_format($credits)." credits allocated",
+        ]);
+    }
+
+    /**
      * Reset monthly credits for a subscription (called on plan activation or monthly renewal).
      */
     public function resetMonthly(int $agencyId, string $plan): void
