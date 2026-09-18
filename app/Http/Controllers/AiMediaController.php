@@ -17,24 +17,42 @@ class AiMediaController extends Controller
     public function index(Request $request)
     {
         $agencyId = $request->user()->agency_id;
+        $clientId = $request->user()->client_id; // client-scoped user
 
-        $media = AiMedia::where('agency_id', $agencyId)->with('client')->latest()->get();
-        $clients = Client::where('agency_id', $agencyId)->get();
-        $locations = GbpLocation::whereHas('client', fn ($q) => $q->where('agency_id', $agencyId))
+        $media = AiMedia::where('agency_id', $agencyId)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->with('client')->latest()->get();
+
+        // A client-bound user has exactly one client — no picker needed.
+        $clients = Client::where('agency_id', $agencyId)
+            ->when($clientId, fn ($q) => $q->where('id', $clientId))
+            ->get();
+
+        $locations = GbpLocation::whereHas('client', function ($q) use ($agencyId, $clientId) {
+                $q->where('agency_id', $agencyId);
+                if ($clientId) $q->where('id', $clientId);
+            })
             ->with('client')->orderBy('title')->get();
 
-        return view('dashboard.ai-media', compact('media', 'clients', 'locations'));
+        $isClientScoped = (bool) $clientId;
+
+        return view('dashboard.ai-media', compact('media', 'clients', 'locations', 'isClientScoped'));
     }
 
     public function generate(Request $request)
     {
         $data = $request->validate([
-            'prompt' => 'required|string|max:600',
+            'prompt' => 'required|string|max:4000',
             'client_id' => 'nullable|exists:clients,id',
         ]);
 
+        @set_time_limit(120); // image generation can take a while for detailed prompts
+
         $agencyId = $request->user()->agency_id;
-        if ($data['client_id'] ?? null) {
+        // Client-bound users always use their own client.
+        if ($request->user()->client_id) {
+            $data['client_id'] = $request->user()->client_id;
+        } elseif ($data['client_id'] ?? null) {
             Client::where('agency_id', $agencyId)->findOrFail($data['client_id']);
         }
 

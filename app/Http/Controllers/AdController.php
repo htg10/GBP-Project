@@ -11,8 +11,12 @@ class AdController extends Controller
     public function index(Request $request)
     {
         $aid = $request->user()->agency_id;
-        $reports = AdReport::where('agency_id', $aid)->orderByDesc('period_end')->get();
-        $clients = Client::where('agency_id', $aid)->get();
+        $clientId = $request->user()->client_id;
+        $reports = AdReport::where('agency_id', $aid)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->orderByDesc('period_end')->get();
+        $clients = Client::where('agency_id', $aid)
+            ->when($clientId, fn ($q) => $q->where('id', $clientId))->get();
 
         $insight = null;
         if ($reports->count() >= 2) {
@@ -45,6 +49,9 @@ class AdController extends Controller
             'period_start' => 'required|date',
             'period_end' => 'required|date',
         ]);
+        if ($request->user()->client_id) {
+            $data['client_id'] = $request->user()->client_id;
+        }
         $data['agency_id'] = $request->user()->agency_id;
         AdReport::create($data);
         return back()->with('success', 'Report added.');

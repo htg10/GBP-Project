@@ -71,12 +71,16 @@
             </div>
         </div>
 
-        <label><span class="lbl">Client (optional)</span>
-            <select id="gm-client">
-                <option value="">-- No client --</option>
-                @foreach($clients as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
-            </select>
-        </label>
+        @if($isClientScoped)
+            <input type="hidden" id="gm-client" value="">
+        @else
+            <label><span class="lbl">Client (optional)</span>
+                <select id="gm-client">
+                    <option value="">-- No client --</option>
+                    @foreach($clients as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
+                </select>
+            </label>
+        @endif
 
         <label><span class="lbl">Image Prompt *</span>
             <textarea id="gm-prompt" rows="4" placeholder="Describe how you want to transform your image..." style="min-height:100px;"></textarea>
@@ -156,19 +160,24 @@ async function generateMedia(){
             headers: {'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json'},
             body: JSON.stringify({prompt, client_id: client_id || null})
         });
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch(_) {}
 
-        if (data.error) {
-            preview.innerHTML = '<div style="color:var(--rose);font-size:14px;">' + data.error + '</div>';
+        if (!res.ok || data.error) {
+            const msg = data.error
+                || (data.errors && Object.values(data.errors)[0] && Object.values(data.errors)[0][0])
+                || data.message
+                || 'Generation failed. Try a shorter, simpler prompt.';
+            preview.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:30px;margin-bottom:8px;">⚠️</div><div style="color:var(--rose);font-size:13.5px;font-weight:600;max-width:240px;">' + msg + '</div></div>';
             return;
         }
 
         if (data.media) {
-            preview.innerHTML = '<img src="' + data.media.image_data + '" style="max-width:100%;max-height:350px;border-radius:12px;">';
+            preview.innerHTML = '<img src="' + data.media.image_data + '" style="max-width:100%;max-height:360px;border-radius:12px;object-fit:contain;">';
             setTimeout(() => location.reload(), 1500);
         }
     } catch (e) {
-        preview.innerHTML = '<div style="color:var(--rose);font-size:14px;">Could not generate image. Try again.</div>';
+        preview.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:30px;margin-bottom:8px;">⚠️</div><div style="color:var(--rose);font-size:13.5px;font-weight:600;max-width:240px;">Image is taking too long or the AI is busy. Try again with a shorter prompt.</div></div>';
     } finally {
         btn.innerHTML = '✦ Generate Image'; btn.disabled = false;
     }

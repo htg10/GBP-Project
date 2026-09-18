@@ -57,6 +57,7 @@ Route::get('/meta/callback', [MetaOAuthController::class, 'callback'])->name('me
 // here when publishing it (sourceUrl must be a real fetchable URL, not a
 // data: URI), so this has to stay outside the auth group.
 Route::get('/media/gbp-photo/{photo}', [GbpContentController::class, 'rawPhoto'])->name('media.gbp-photo');
+Route::get('/media/gbp-post-image/{post}', [GbpContentController::class, 'rawPostImage'])->name('media.gbp-post-image');
 
 // Email verification (signed URL — no auth required for the verify link)
 Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\EmailVerificationController::class, 'verify'])
@@ -78,11 +79,18 @@ Route::middleware('auth')->group(function () {
     // Client team management (Client Owner adds Staff / Marketing Managers)
     Route::get('/team', [\App\Http\Controllers\TeamController::class, 'index'])->name('team');
     Route::post('/team', [\App\Http\Controllers\TeamController::class, 'store'])->name('team.store');
+    Route::post('/team/{user}', [\App\Http\Controllers\TeamController::class, 'update'])->name('team.update');
     Route::delete('/team/{user}', [\App\Http\Controllers\TeamController::class, 'destroy'])->name('team.destroy');
 
     // Client billing (subscription payment history + PDF invoices)
     Route::get('/billing', [\App\Http\Controllers\ClientBillingController::class, 'index'])->name('client-billing');
     Route::get('/billing/invoice/{payment}', [\App\Http\Controllers\ClientBillingController::class, 'invoice'])->name('client-billing.invoice');
+
+    // Buy credits (client tops up when their credits run low)
+    Route::get('/buy-credits', [BillingController::class, 'buyCredits'])->name('buy-credits');
+    Route::post('/buy-credits/instant', [BillingController::class, 'creditBuyInstant'])->name('buy-credits.instant');
+    Route::post('/buy-credits/checkout', [BillingController::class, 'creditCheckout'])->name('buy-credits.checkout');
+    Route::post('/buy-credits/verify', [BillingController::class, 'creditVerify'])->name('buy-credits.verify');
 
     // Email verification
     Route::post('/email/send-verification', [App\Http\Controllers\EmailVerificationController::class, 'send'])->name('verification.send');
@@ -104,6 +112,7 @@ Route::middleware('auth')->group(function () {
 
     // Reviews (GBP) — card grid of locations, then a scoped view per location.
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
+    Route::post('/reviews/settings', [ReviewController::class, 'updateSettings'])->name('reviews.settings');
     Route::get('/reviews/{location}', [ReviewController::class, 'show'])->name('reviews.show');
     Route::post('/reviews/{location}/sync', [ReviewController::class, 'sync'])->name('reviews.sync');
     Route::post('/reviews/{review}/generate', [ReviewController::class, 'generateReply'])->name('reviews.generate');
@@ -114,9 +123,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/gbp-content/posts', [GbpContentController::class, 'storePost'])->name('gbp-content.posts.store');
     Route::post('/gbp-content/posts/generate', [GbpContentController::class, 'generatePostCopy'])->name('gbp-content.posts.generate');
     Route::post('/gbp-content/posts/{post}/publish', [GbpContentController::class, 'publishExistingPost'])->name('gbp-content.posts.publish');
+    Route::post('/gbp-content/posts/{post}', [GbpContentController::class, 'updatePost'])->name('gbp-content.posts.update');
+    Route::delete('/gbp-content/posts/{post}', [GbpContentController::class, 'destroyPost'])->name('gbp-content.posts.destroy');
     Route::post('/gbp-content/photos', [GbpContentController::class, 'storePhoto'])->name('gbp-content.photos.store');
     Route::post('/gbp-content/photos/caption', [GbpContentController::class, 'generateCaption'])->name('gbp-content.photos.caption');
     Route::post('/gbp-content/photos/{photo}/publish', [GbpContentController::class, 'publishExistingPhoto'])->name('gbp-content.photos.publish');
+    Route::delete('/gbp-content/photos/{photo}', [GbpContentController::class, 'destroyPhoto'])->name('gbp-content.photos.destroy');
 
     // Leads
     Route::get('/leads', [LeadController::class, 'index'])->name('leads');
@@ -227,4 +239,11 @@ Route::middleware(['auth', 'role:SUPER_ADMIN'])->prefix('admin')->name('admin.')
     Route::post('/plans', [\App\Http\Controllers\PlanController::class, 'store'])->name('plans.store');
     Route::post('/plans/{plan}', [\App\Http\Controllers\PlanController::class, 'update'])->name('plans.update');
     Route::delete('/plans/{plan}', [\App\Http\Controllers\PlanController::class, 'destroy'])->name('plans.destroy');
+
+    // Credit packages (create/edit, pause/activate)
+    Route::get('/credit-packages', [\App\Http\Controllers\CreditPackageController::class, 'index'])->name('credit-packages');
+    Route::post('/credit-packages', [\App\Http\Controllers\CreditPackageController::class, 'store'])->name('credit-packages.store');
+    Route::post('/credit-packages/{package}', [\App\Http\Controllers\CreditPackageController::class, 'update'])->name('credit-packages.update');
+    Route::post('/credit-packages/{package}/toggle', [\App\Http\Controllers\CreditPackageController::class, 'toggle'])->name('credit-packages.toggle');
+    Route::delete('/credit-packages/{package}', [\App\Http\Controllers\CreditPackageController::class, 'destroy'])->name('credit-packages.destroy');
 });

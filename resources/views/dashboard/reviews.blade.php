@@ -13,33 +13,57 @@
     $avgAll = $totalR ? $locations->avg('reviews_avg_star_rating') : 0;
 @endphp
 
-{{-- Toggle controls --}}
+{{-- Toggle controls (persisted) --}}
 <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;">
-    <div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 18px;flex:0 0 auto;">
+    <div class="card rf-toggle" style="display:flex;align-items:center;gap:12px;padding:12px 18px;flex:0 0 auto;cursor:pointer;" onclick="flipToggle('wa-toggle')">
         <div>
             <div style="font-size:13px;font-weight:600;">WhatsApp Notifications</div>
             <div style="font-size:11px;color:var(--muted);">Get notified for new reviews</div>
         </div>
-        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-            <input type="checkbox" id="wa-toggle" style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:.2s;" onclick="this.previousElementSibling.checked=!this.previousElementSibling.checked;this.style.background=this.previousElementSibling.checked?'var(--teal)':'var(--line)';this.querySelector('i').style.transform=this.previousElementSibling.checked?'translateX(20px)':'translateX(0)';">
-                <i style="position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s;display:block;box-shadow:0 1px 3px rgba(0,0,0,.12);"></i>
-            </span>
-        </label>
+        <span class="rf-sw" id="wa-sw" data-on="{{ $settings['wa_notify'] ? 1 : 0 }}"><i></i></span>
+        <input type="checkbox" id="wa-toggle" {{ $settings['wa_notify'] ? 'checked' : '' }} style="display:none;">
     </div>
-    <div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 18px;flex:0 0 auto;">
+    <div class="card rf-toggle" style="display:flex;align-items:center;gap:12px;padding:12px 18px;flex:0 0 auto;cursor:pointer;" onclick="flipToggle('ar-toggle')">
         <div>
             <div style="font-size:13px;font-weight:600;">Universal Auto Reply</div>
             <div style="font-size:11px;color:var(--muted);">AI replies to new reviews automatically</div>
         </div>
-        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-            <input type="checkbox" id="ar-toggle" style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:.2s;" onclick="this.previousElementSibling.checked=!this.previousElementSibling.checked;this.style.background=this.previousElementSibling.checked?'var(--teal)':'var(--line)';this.querySelector('i').style.transform=this.previousElementSibling.checked?'translateX(20px)':'translateX(0)';">
-                <i style="position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s;display:block;box-shadow:0 1px 3px rgba(0,0,0,.12);"></i>
-            </span>
-        </label>
+        <span class="rf-sw" id="ar-sw" data-on="{{ $settings['auto_reply'] ? 1 : 0 }}"><i></i></span>
+        <input type="checkbox" id="ar-toggle" {{ $settings['auto_reply'] ? 'checked' : '' }} style="display:none;">
     </div>
 </div>
+
+@push('head')
+<style>
+    .rf-sw{position:relative;width:44px;height:24px;border-radius:24px;background:var(--line);transition:.2s;flex-shrink:0;display:inline-block;}
+    .rf-sw.on{background:var(--teal);}
+    .rf-sw i{position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.12);}
+    .rf-sw.on i{transform:translateX(20px);}
+</style>
+@endpush
+@push('scripts')
+<script>
+function paintSwitch(id){
+    const cb = document.getElementById(id);
+    const sw = document.getElementById(id.replace('-toggle','-sw'));
+    sw.classList.toggle('on', cb.checked);
+}
+function flipToggle(id){
+    const cb = document.getElementById(id);
+    cb.checked = !cb.checked;
+    paintSwitch(id);
+    fetch("{{ route('reviews.settings') }}", {
+        method:'POST',
+        headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},
+        body:JSON.stringify({
+            wa_notify: document.getElementById('wa-toggle').checked ? 1 : 0,
+            auto_reply: document.getElementById('ar-toggle').checked ? 1 : 0
+        })
+    });
+}
+['wa-toggle','ar-toggle'].forEach(paintSwitch);
+</script>
+@endpush
 
 {{-- Stat cards --}}
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">

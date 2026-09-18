@@ -37,7 +37,15 @@ return [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),
         'redirect' => env('META_REDIRECT_URI'),
-        'graph_version' => env('META_GRAPH_VERSION', 'v21.0'),
+        'graph_version' => env('META_GRAPH_VERSION', env('META_API_VERSION', 'v21.0')),
+        'config_id' => env('META_CONFIG_ID'),
+        'verify_token' => env('META_VERIFY_TOKEN'),
+        'system_user_token' => env('META_SYSTEM_USER_TOKEN'),
+        'use_fake' => env('META_USE_FAKE', false),
+        // WhatsApp Cloud API
+        'whatsapp_phone_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'whatsapp_token' => env('WHATSAPP_ACCESS_TOKEN', env('META_SYSTEM_USER_TOKEN')),
+        'whatsapp_webhook_verify' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', env('META_VERIFY_TOKEN')),
         // Scopes needed to list Pages, publish to a Page feed, and publish to
         // the Page's linked Instagram Business Account.
         'scopes' => [

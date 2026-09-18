@@ -1,82 +1,151 @@
 <?php $__env->startSection('title', 'Social'); ?>
 <?php $__env->startSection('content'); ?>
+
+<?php
+    $platMeta = [
+        'FACEBOOK'  => ['label'=>'Facebook',  'clr'=>'#1877f2', 'ic'=>'f'],
+        'INSTAGRAM' => ['label'=>'Instagram', 'clr'=>'#e1306c', 'ic'=>'◉'],
+        'LINKEDIN'  => ['label'=>'LinkedIn',  'clr'=>'#0a66c2', 'ic'=>'in'],
+        'X'         => ['label'=>'X',          'clr'=>'#111',    'ic'=>'𝕏'],
+    ];
+    $badgeFor = fn($s) => $s==='PUBLISHED'?'teal':($s==='SCHEDULED'?'amber':($s==='FAILED'?'rose':'gray'));
+?>
+
 <div class="page-head">
-    <div><h1>Social Media</h1><p>Draft and publish posts across your channels, with AI help.</p></div>
-    <button class="btn" onclick="document.getElementById('post-modal').classList.add('open')">+ New post</button>
+    <div><h1>Social Studio</h1><p>Compose, preview and publish to Facebook &amp; Instagram in one place.</p></div>
+    <span class="badge <?php echo e($liveCount ? 'teal' : 'gray'); ?>"><?php echo e($liveCount ? '● '.$liveCount.' account(s) connected' : 'No Meta account connected'); ?></span>
 </div>
 
-<?php if(($liveCount ?? 0) === 0): ?>
-    <div style="background:var(--amber-soft);border:1px solid #f0d9a8;border-radius:11px;padding:11px 15px;margin-bottom:16px;font-size:13px;color:#8a5a08;">
-        ⚡ Facebook/Instagram posts save as <strong>drafts only</strong> right now. To publish for real, open a client and click <strong>“Connect Meta”</strong>.
-    </div>
-<?php else: ?>
-    <div style="background:var(--teal-soft);border:1px solid #cfe6e0;border-radius:11px;padding:11px 15px;margin-bottom:16px;font-size:13px;color:var(--teal-ink);">
-        ✓ <strong><?php echo e($liveCount); ?></strong> client(s) connected to Meta — Facebook/Instagram posts publish for real.
-    </div>
-<?php endif; ?>
+<div class="social-wrap">
+    
+    <div class="card composer">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4c6fff,#8b5cf6);display:grid;place-items:center;color:#fff;font-size:17px;">✎</div>
+            <div><div style="font-weight:700;">Create Post</div><div style="font-size:12px;color:var(--muted);">Write once, publish everywhere</div></div>
+        </div>
 
-<?php if($clients->isEmpty()): ?><div class="alert info">Add a client first — posts attach to a client.</div><?php endif; ?>
-
-<?php $badgeFor = fn($s) => $s==='PUBLISHED'?'teal':($s==='SCHEDULED'?'amber':($s==='FAILED'?'rose':'gray')); ?>
-
-<?php if($posts->isEmpty()): ?>
-    <div class="card"><div class="empty">No posts yet. Click “New post” to draft your first one.</div></div>
-<?php else: ?>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-        <?php $__currentLoopData = $posts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <span style="font-weight:600;font-size:13.5px;color:var(--teal-ink);"><?php echo e(ucfirst(strtolower($p->platform))); ?></span>
-                    <span class="badge <?php echo e($badgeFor($p->status)); ?>"><?php echo e($p->status); ?></span>
-                </div>
-                <?php if(!empty($p->media_urls[0])): ?>
-                    <img src="<?php echo e($p->media_urls[0]); ?>" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:8px;background:#f3f1ea;margin-bottom:10px;">
-                <?php endif; ?>
-                <p style="font-size:14px;line-height:1.55;color:#2a3a35;"><?php echo e($p->body); ?></p>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-                    <?php if($p->scheduled_at): ?><div style="font-size:12px;color:var(--muted);">🗓 <?php echo e($p->scheduled_at->format('d M Y, h:i A')); ?></div><?php else: ?><span></span><?php endif; ?>
-                    <?php if($p->status === 'FAILED' && in_array($p->platform, ['FACEBOOK','INSTAGRAM'])): ?>
-                        <form method="POST" action="<?php echo e(route('social.retry', $p)); ?>">
-                            <?php echo csrf_field(); ?>
-                            <button type="submit" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">Retry publish</button>
-                        </form>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-    </div>
-<?php endif; ?>
-
-<div class="modal-bg" id="post-modal">
-    <div class="modal">
-        <h2>New post</h2>
         <form method="POST" action="<?php echo e(route('social.store')); ?>">
             <?php echo csrf_field(); ?>
-            <label><span class="lbl">Client</span><select name="client_id"><?php $__currentLoopData = $clients; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($c->id); ?>"><?php echo e($c->name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select></label>
-            <label><span class="lbl">Platform</span><select name="platform">
-                <option value="FACEBOOK">Facebook</option><option value="INSTAGRAM">Instagram (image required)</option><option value="LINKEDIN">LinkedIn</option><option value="X">X (Twitter)</option>
-            </select></label>
-            <label><span class="lbl">Caption</span><textarea name="body" id="post-body" rows="4" placeholder="What's on your mind?"></textarea></label>
-            <button type="button" onclick="genCaption(this)" style="background:none;border:none;color:var(--teal);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:8px;">✦ Generate with AI</button>
-            <label><span class="lbl">Image URL (optional — required for Instagram)</span><input type="url" name="media_url" placeholder="https://…"></label>
-            <label><span class="lbl">Schedule (optional — leave blank to publish now)</span><input type="datetime-local" name="scheduled_at"></label>
-            <div style="display:flex;gap:10px;margin-top:18px;">
-                <button type="button" class="btn btn-ghost" style="flex:1;" onclick="document.getElementById('post-modal').classList.remove('open')">Cancel</button>
-                <button type="submit" class="btn" style="flex:1;justify-content:center;">Save post</button>
+            <label><span class="lbl">Client</span>
+                <select name="client_id" required>
+                    <?php $__currentLoopData = $clients; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($c->id); ?>"><?php echo e($c->name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                </select>
+            </label>
+
+            <span class="lbl">Platform</span>
+            <div class="plat-picker">
+                <?php $__currentLoopData = $platMeta; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $m): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <label class="plat-opt" style="--pc:<?php echo e($m['clr']); ?>;">
+                        <input type="radio" name="platform" value="<?php echo e($key); ?>" <?php echo e($loop->first ? 'checked' : ''); ?> onchange="setPreviewPlatform('<?php echo e($m['label']); ?>','<?php echo e($m['clr']); ?>')">
+                        <span class="plat-ic"><?php echo e($m['ic']); ?></span><?php echo e($m['label']); ?>
+
+                    </label>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
+
+            <label style="margin-top:6px;">
+                <div style="display:flex;justify-content:space-between;"><span class="lbl">Caption</span><span style="font-size:11px;color:var(--muted);" id="soc-count">0 chars</span></div>
+                <textarea name="body" id="soc-body" rows="5" placeholder="What's happening at your business?" oninput="updatePreview()" required></textarea>
+            </label>
+            <button type="button" onclick="genCaption(this)" style="background:none;border:none;color:var(--teal);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:6px;">✨ Write with AI</button>
+
+            <label style="margin-top:10px;"><span class="lbl">Image URL (optional)</span><input type="url" name="media_url" id="soc-media" placeholder="https://... (public image)" oninput="updatePreview()"></label>
+            <label style="margin-top:10px;"><span class="lbl">Schedule (leave blank to publish now)</span><input type="datetime-local" name="scheduled_at"></label>
+
+            <button type="submit" class="btn" style="width:100%;justify-content:center;margin-top:16px;padding:12px;">🚀 Publish Post</button>
         </form>
     </div>
+
+    
+    <div class="card preview-card">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:12px;">LIVE PREVIEW</div>
+        <div class="soc-preview">
+            <div class="sp-head">
+                <div class="sp-av" id="pv-badge" style="background:#1877f2;">f</div>
+                <div><div class="sp-name">Your Business</div><div class="sp-plat" id="pv-plat">Facebook · Just now</div></div>
+            </div>
+            <div class="sp-body" id="pv-body">Your caption preview will appear here…</div>
+            <div class="sp-img" id="pv-img" style="display:none;"><img id="pv-img-src" src="" alt=""></div>
+            <div class="sp-actions"><span>👍 Like</span><span>💬 Comment</span><span>↗ Share</span></div>
+        </div>
+    </div>
 </div>
+
+
+<div style="margin:24px 0 12px;font-size:16px;font-weight:700;">Recent Posts</div>
+<?php if($posts->isEmpty()): ?>
+    <div class="card"><div class="empty">No posts yet. Compose your first post above.</div></div>
+<?php else: ?>
+<div class="soc-grid">
+    <?php $__currentLoopData = $posts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $post): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php $m = $platMeta[$post->platform] ?? ['label'=>$post->platform,'clr'=>'#888','ic'=>'•']; ?>
+        <div class="card" style="padding:14px;">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+                <div style="width:30px;height:30px;border-radius:8px;background:<?php echo e($m['clr']); ?>;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700;"><?php echo e($m['ic']); ?></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;"><?php echo e($m['label']); ?></div><div style="font-size:11px;color:var(--muted);"><?php echo e($post->client->name ?? ''); ?></div></div>
+                <span class="badge <?php echo e($badgeFor($post->status)); ?>"><?php echo e($post->status === 'PUBLISHED' ? 'Live' : $post->status); ?></span>
+            </div>
+            <?php if(!empty($post->media_urls)): ?><img src="<?php echo e($post->media_urls[0]); ?>" style="width:100%;height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px;background:#eef1f8;"><?php endif; ?>
+            <p style="font-size:13px;line-height:1.5;"><?php echo e(Str::limit($post->body, 140)); ?></p>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid var(--line);">
+                <span style="font-size:11px;color:var(--muted);"><?php echo e($post->created_at->diffForHumans()); ?></span>
+                <?php if($post->status === 'FAILED'): ?>
+                    <form method="POST" action="<?php echo e(route('social.retry', $post)); ?>"><?php echo csrf_field(); ?><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;">Retry</button></form>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+</div>
+<?php endif; ?>
+
+<?php $__env->startPush('head'); ?>
+<style>
+    .social-wrap{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+    .plat-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px;}
+    .plat-opt{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 4px;border:1.5px solid var(--line);border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.12s;}
+    .plat-opt input{position:absolute;opacity:0;}
+    .plat-opt .plat-ic{width:20px;height:20px;border-radius:6px;background:var(--pc);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;}
+    .plat-opt:has(input:checked){border-color:var(--pc);background:color-mix(in srgb, var(--pc) 8%, transparent);}
+    .preview-card{align-self:start;position:sticky;top:70px;}
+    .soc-preview{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card);}
+    .sp-head{display:flex;align-items:center;gap:10px;padding:12px 14px;}
+    .sp-av{width:38px;height:38px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;}
+    .sp-name{font-size:13.5px;font-weight:700;}
+    .sp-plat{font-size:11px;color:var(--muted);}
+    .sp-body{padding:0 14px 12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+    .sp-img img{width:100%;max-height:260px;object-fit:cover;display:block;}
+    .sp-actions{display:flex;justify-content:space-around;padding:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+    .soc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+    @media (max-width:820px){ .social-wrap{grid-template-columns:1fr;} .preview-card{position:static;} .plat-picker{grid-template-columns:repeat(2,1fr);} }
+</style>
+<?php $__env->stopPush(); ?>
 <?php $__env->startPush('scripts'); ?>
 <script>
+function updatePreview(){
+    const body = document.getElementById('soc-body').value;
+    const media = document.getElementById('soc-media').value;
+    document.getElementById('pv-body').textContent = body || 'Your caption preview will appear here…';
+    document.getElementById('soc-count').textContent = body.length + ' chars';
+    const imgWrap = document.getElementById('pv-img');
+    if(media){ document.getElementById('pv-img-src').src = media; imgWrap.style.display=''; }
+    else { imgWrap.style.display='none'; }
+}
+function setPreviewPlatform(label, clr){
+    document.getElementById('pv-badge').style.background = clr;
+    document.getElementById('pv-plat').textContent = label + ' · Just now';
+    document.getElementById('pv-badge').textContent = {Facebook:'f',Instagram:'◉',LinkedIn:'in',X:'𝕏'}[label] || '•';
+}
 async function genCaption(btn){
-    const body = document.getElementById('post-body');
-    btn.textContent='Generating…';btn.disabled=true;
+    const body = document.getElementById('soc-body');
+    const prompt = body.value.trim() || 'a friendly social media post for a local business';
+    btn.textContent='Writing…'; btn.disabled=true;
     try{
-        const res = await fetch('<?php echo e(route('social.caption')); ?>',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},body:JSON.stringify({prompt:body.value||'a social media post'})});
-        const data = await res.json(); body.value = data.body;
-    }catch(e){alert('Could not generate.');}
-    finally{btn.textContent='✦ Generate with AI';btn.disabled=false;}
+        const res = await fetch("<?php echo e(route('social.caption')); ?>",{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+        const data = await res.json();
+        if(data.error){ alert(data.error); return; }
+        body.value = data.body; updatePreview();
+    }catch(e){ alert('Could not generate.'); }
+    finally{ btn.textContent='✨ Write with AI'; btn.disabled=false; }
 }
 </script>
 <?php $__env->stopPush(); ?>

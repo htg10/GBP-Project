@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Subscription extends Model
 {
-    protected $fillable = ['agency_id', 'plan', 'credit_balance', 'monthly_credits', 'credits_reset_at', 'status', 'provider', 'external_id', 'renews_at'];
-    protected $casts = ['renews_at' => 'datetime', 'credits_reset_at' => 'datetime'];
+    protected $fillable = ['agency_id', 'plan', 'credit_balance', 'monthly_credits', 'credits_reset_at', 'status', 'provider', 'external_id', 'renews_at', 'auto_reply', 'wa_notify'];
+    protected $casts = ['renews_at' => 'datetime', 'credits_reset_at' => 'datetime', 'auto_reply' => 'boolean', 'wa_notify' => 'boolean'];
 
     public function agency(): BelongsTo { return $this->belongsTo(Agency::class); }
 }

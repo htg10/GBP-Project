@@ -44,6 +44,19 @@ class GbpContentController extends Controller
         return response(base64_decode($base64 ?? ''), 200)->header('Content-Type', $mime);
     }
 
+    /** Public raw image for a GBP post (Google fetches it when publishing). */
+    public function rawPostImage(GbpPost $post)
+    {
+        abort_if(! $post->image, 404);
+        if (! str_starts_with($post->image, 'data:')) {
+            return redirect($post->image);
+        }
+        [$meta, $base64] = explode(',', $post->image, 2) + [null, null];
+        preg_match('/^data:(.*?);base64$/', $meta ?? '', $m);
+        $mime = $m[1] ?? 'image/png';
+        return response(base64_decode($base64 ?? ''), 200)->header('Content-Type', $mime);
+    }
+
     public function index(Request $request)
     {
         $agencyId = $request->user()->agency_id;
@@ -96,14 +109,23 @@ class GbpContentController extends Controller
             'body' => 'required|string|max:1500',
             'cta_url' => 'nullable|url',
             'scheduled_at' => 'nullable|date',
+            'image' => 'nullable|image|max:5120',
         ]);
 
         $location = $this->locationFor($agencyId, $data['gbp_location_id']);
+
+        // Store the uploaded image as a data URI so it can be shown and published.
+        $imageData = null;
+        if ($request->hasFile('image')) {
+            $f = $request->file('image');
+            $imageData = 'data:'.$f->getMimeType().';base64,'.base64_encode(file_get_contents($f->getRealPath()));
+        }
 
         $post = GbpPost::create([
             'gbp_location_id' => $location->id,
             'type' => $data['type'],
             'body' => $data['body'],
+            'image' => $imageData,
             'cta_url' => $data['cta_url'] ?? null,
             'status' => $request->filled('scheduled_at') ? 'SCHEDULED' : 'DRAFT',
             'scheduled_at' => $data['scheduled_at'] ?? null,
@@ -185,13 +207,31 @@ class GbpContentController extends Controller
         $location = $post->location;
         $client = $location->client;
 
+        // Google's LocalPostTopicType only accepts STANDARD / EVENT / OFFER / ALERT.
+        // Our friendly "UPDATE" type maps to Google's "STANDARD".
+        $topicType = match ($post->type) {
+            'OFFER' => 'OFFER',
+            'EVENT' => 'EVENT',
+            'ALERT' => 'ALERT',
+            default => 'STANDARD',
+        };
+
         $payload = [
             'languageCode' => 'en-US',
             'summary' => $post->body,
-            'topicType' => $post->type,
+            'topicType' => $topicType,
         ];
         if ($post->cta_url) {
             $payload['callToAction'] = ['actionType' => 'LEARN_MORE', 'url' => $post->cta_url];
+        }
+        // Attach the image. Google fetches sourceUrl itself, so a data: URI is
+        // served via our public raw endpoint (only reachable when APP_URL is a
+        // real public domain — on localhost Google can't fetch it).
+        if ($post->image) {
+            $sourceUrl = str_starts_with($post->image, 'data:')
+                ? route('media.gbp-post-image', $post)
+                : $post->image;
+            $payload['media'] = [['mediaFormat' => 'PHOTO', 'sourceUrl' => $sourceUrl]];
         }
 
         $ok = $this->gbp->createPost($client, $location->google_name, $payload);
@@ -219,6 +259,36 @@ class GbpContentController extends Controller
         $ok = $this->gbp->uploadPhoto($client, $location->google_name, $sourceUrl, $photo->caption);
 
         $photo->update(['status' => $ok ? 'PUBLISHED' : 'FAILED']);
+    }
+
+    public function updatePost(Request $request, GbpPost $post)
+    {
+        $this->authorizePost($request, $post);
+        $data = $request->validate([
+            'type' => 'required|in:OFFER,EVENT,UPDATE',
+            'body' => 'required|string|max:1500',
+            'cta_url' => 'nullable|url',
+        ]);
+        $post->update([
+            'type' => $data['type'],
+            'body' => $data['body'],
+            'cta_url' => $data['cta_url'] ?? null,
+        ]);
+        return back()->with('success', 'Post updated. Click Publish to push the change to Google.');
+    }
+
+    public function destroyPost(Request $request, GbpPost $post)
+    {
+        $this->authorizePost($request, $post);
+        $post->delete();
+        return back()->with('success', 'Post deleted.');
+    }
+
+    public function destroyPhoto(Request $request, GbpPhoto $photo)
+    {
+        abort_unless($photo->location->client->agency_id === $request->user()->agency_id, 403);
+        $photo->delete();
+        return back()->with('success', 'Photo deleted.');
     }
 
     private function authorizePost(Request $request, GbpPost $post): void

@@ -41,7 +41,9 @@
         label .lbl{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;margin-top:12px;}
         .modal-bg{position:fixed;inset:0;background:rgba(16,36,31,.35);display:none;place-items:center;padding:20px;z-index:50;}
         .modal-bg.open{display:grid;}.modal{width:100%;max-width:400px;background:#fff;border-radius:16px;padding:24px;}
-        .icon-btn{background:none;border:none;cursor:pointer;padding:6px;color:var(--muted);border-radius:7px;font-size:14px;}
+        .icon-btn{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--muted);font-size:14px;display:inline-grid;place-items:center;vertical-align:middle;margin-left:2px;transition:border-color .12s,background .12s,color .12s;}
+        .icon-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft);}
+        .btn-ghost:hover{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink);}
 
         /* ---- Responsive: tablet / phone ---- */
         .topbar{display:none;position:fixed;top:0;left:0;right:0;height:56px;background:var(--card);border-bottom:1px solid var(--line);align-items:center;gap:12px;padding:0 14px;z-index:101;}
@@ -82,6 +84,7 @@
         <a href="<?php echo e(route('admin.overview')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.overview') ? 'active' : ''); ?>">▦ Overview</a>
         <a href="<?php echo e(route('admin.users')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.users') ? 'active' : ''); ?>">◉ Users</a>
         <a href="<?php echo e(route('admin.plans')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.plans') ? 'active' : ''); ?>">▤ Plans</a>
+        <a href="<?php echo e(route('admin.credit-packages')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.credit-packages') ? 'active' : ''); ?>">⚡ Credit Packs</a>
         <a href="<?php echo e(route('admin.billing')); ?>" class="nav-item <?php echo e(request()->routeIs('admin.billing') ? 'active' : ''); ?>">▭ Billing</a>
         <div class="nav-spacer"></div>
         <a href="<?php echo e(route('dashboard')); ?>" class="back">⇄ User view</a>

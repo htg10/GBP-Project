@@ -55,6 +55,13 @@ class AdminController extends Controller
         }
         $data['agency_id'] = $request->user()->agency_id;
         $data['client_id'] = $data['client_id'] ?: null;
+
+        // A Client Owner must own exactly one business — auto-create it if none chosen.
+        if ($data['role'] === 'CLIENT_OWNER' && ! $data['client_id']) {
+            $client = Client::create(['agency_id' => $data['agency_id'], 'name' => $data['name'], 'email' => $data['email']]);
+            $data['client_id'] = $client->id;
+        }
+
         User::create($data);
         return back()->with('success', 'User created.');
     }
@@ -72,7 +79,13 @@ class AdminController extends Controller
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->role = $data['role'];
-        $user->client_id = $data['client_id'] ?: null;
+        $clientId = $data['client_id'] ?: null;
+        // Keep every Client Owner bound to a business.
+        if ($data['role'] === 'CLIENT_OWNER' && ! $clientId) {
+            $client = Client::create(['agency_id' => $user->agency_id, 'name' => $data['name'], 'email' => $data['email']]);
+            $clientId = $client->id;
+        }
+        $user->client_id = $clientId;
         if (! empty($data['password'])) $user->password = $data['password'];
         $user->save();
         return back()->with('success', 'User updated.');

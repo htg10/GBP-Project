@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Client;
 use App\Models\GbpLocation;
 use App\Models\Plan;
+use App\Models\CreditPackage;
 use App\Models\Subscription;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -52,6 +53,16 @@ class DatabaseSeeder extends Seeder
 
         // ---- Plans (Super Admin managed, GST-inclusive) ----
         $this->seedPlans();
+
+        // ---- Credit packages (clients buy to top up) ----
+        foreach ([
+            ['name' => 'Starter Pack', 'credits' => 250, 'price' => 499, 'sort' => 1],
+            ['name' => 'Booster Pack', 'credits' => 1000, 'price' => 1799, 'sort' => 2],
+            ['name' => 'Power Pack', 'credits' => 2000, 'price' => 2999, 'sort' => 3],
+            ['name' => 'Agency Pack', 'credits' => 5000, 'price' => 6999, 'sort' => 4],
+        ] as $p) {
+            CreditPackage::updateOrCreate(['name' => $p['name']], array_merge($p, ['gst_rate' => 18, 'is_active' => true]));
+        }
 
         $this->command->info('Seeded!');
         $this->command->info('  SUPER ADMIN: admin@demo.com / admin123');

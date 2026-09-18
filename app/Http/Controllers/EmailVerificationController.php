@@ -34,10 +34,10 @@ class EmailVerificationController extends Controller
                     ->subject('Verify your email — ReviewFlow')
                     ->html(
                         '<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px;">'
-                        . '<div style="width:48px;height:48px;border-radius:12px;background:#0f6b5c;color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px;margin-bottom:20px;">R</div>'
+                        . '<div style="width:48px;height:48px;border-radius:12px;background:#4c6fff;color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px;margin-bottom:20px;">R</div>'
                         . '<h2 style="margin:0 0 8px;">Verify your email</h2>'
                         . '<p style="color:#6f7d78;margin:0 0 24px;line-height:1.6;">Click the button below to verify your email address and unlock all ReviewFlow features.</p>'
-                        . '<a href="' . $verifyUrl . '" style="display:inline-block;padding:12px 28px;background:#0f6b5c;color:#fff;border-radius:10px;text-decoration:none;font-weight:600;">Verify Email Address</a>'
+                        . '<a href="' . $verifyUrl . '" style="display:inline-block;padding:12px 28px;background:#4c6fff;color:#fff;border-radius:10px;text-decoration:none;font-weight:600;">Verify Email Address</a>'
                         . '<p style="color:#999;font-size:12px;margin-top:24px;">If you didn\'t create an account, no action is needed.</p>'
                         . '</div>'
                     );
@@ -64,10 +64,12 @@ class EmailVerificationController extends Controller
         }
 
         if (! $user->email_verified_at) {
-            $user->update(['email_verified_at' => now()]);
+            // email_verified_at isn't mass-assignable — set it directly so it persists.
+            $user->email_verified_at = now();
+            $user->save();
         }
 
-        return redirect()->route('dashboard')->with('success', 'Email verified successfully!');
+        return redirect()->route('dashboard')->with('success', 'Email verified successfully! ✓');
     }
 
     public function changeEmail(Request $request)

@@ -30,10 +30,11 @@
         <div class="card" style="padding:0;overflow:hidden;">
             <table>
                 <thead>
-                    <tr><th style="width:50px;"></th><th>Post</th><th>Type</th><th>Status</th><th>Date</th><th style="width:80px;"></th></tr>
+                    <tr><th style="width:50px;"></th><th>Post</th><th>Type</th><th>Status</th><th>Date</th><th style="width:150px;text-align:right;">Actions</th></tr>
                 </thead>
                 <tbody>
                     @foreach($posts as $p)
+                    @php $editData = ['id'=>$p->id,'type'=>$p->type,'body'=>$p->body,'cta_url'=>$p->cta_url]; @endphp
                     <tr>
                         <td>
                             @if($p->image)
@@ -50,13 +51,16 @@
                         <td><span class="badge {{ $badgeFor($p->status) }}">{{ $p->status === 'PUBLISHED' ? 'Live' : $p->status }}</span></td>
                         <td style="font-size:12px;color:var(--muted);">{{ ($p->scheduled_at ?? $p->created_at)->format('M d, Y') }}</td>
                         <td>
-                            <div style="display:flex;gap:6px;">
-                                @if(in_array($p->status, ['SCHEDULED','FAILED']))
-                                    <form method="POST" action="{{ route('gbp-content.posts.publish', $p) }}">
-                                        @csrf
-                                        <button type="submit" class="btn btn-ghost" style="padding:5px 10px;font-size:11px;">Publish</button>
-                                    </form>
-                                @endif
+                            <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                <button type="button" class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick='openEditPost(@json($editData))'>Edit</button>
+                                <form method="POST" action="{{ route('gbp-content.posts.publish', $p) }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-ghost" style="padding:5px 10px;font-size:11px;">{{ $p->status === 'PUBLISHED' ? 'Re-publish' : ($p->status === 'FAILED' ? 'Retry' : 'Publish') }}</button>
+                                </form>
+                                <form method="POST" action="{{ route('gbp-content.posts.destroy', $p) }}" onsubmit="return confirm('Delete this post?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-ghost" style="padding:5px 10px;font-size:11px;color:var(--rose);border-color:var(--rose-soft);">Delete</button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -81,12 +85,18 @@
                         <span class="badge {{ $badgeFor($ph->status) }}">{{ $ph->status }}</span>
                     </div>
                     @if($ph->caption)<p style="font-size:13px;color:var(--ink);margin-top:6px;">{{ $ph->caption }}</p>@endif
-                    @if(in_array($ph->status, ['DRAFT','SCHEDULED','FAILED']))
-                        <form method="POST" action="{{ route('gbp-content.photos.publish', $ph) }}" style="margin-top:9px;">
-                            @csrf
-                            <button type="submit" class="btn btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;">{{ $ph->status === 'FAILED' ? 'Retry publish' : 'Publish now' }}</button>
+                    <div style="display:flex;gap:6px;margin-top:9px;">
+                        @if($ph->status !== 'PUBLISHED')
+                            <form method="POST" action="{{ route('gbp-content.photos.publish', $ph) }}" style="flex:1;">
+                                @csrf
+                                <button type="submit" class="btn btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;">{{ $ph->status === 'FAILED' ? 'Retry' : 'Publish' }}</button>
+                            </form>
+                        @endif
+                        <form method="POST" action="{{ route('gbp-content.photos.destroy', $ph) }}" onsubmit="return confirm('Delete this photo?')" style="flex:1;">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-ghost" style="width:100%;padding:6px 12px;font-size:12px;color:var(--rose);border-color:var(--rose-soft);">Delete</button>
                         </form>
-                    @endif
+                    </div>
                 </div>
             @endforeach
         </div>
@@ -97,7 +107,7 @@
 <div class="modal-bg" id="post-modal">
     <div class="modal" style="max-width:580px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h2 style="margin:0;">Add Post</h2>
+            <h2 style="margin:0;" id="post-modal-title">Add Post</h2>
             <button type="button" onclick="document.getElementById('post-modal').classList.remove('open')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
         </div>
 
@@ -108,7 +118,7 @@
             <button type="button" class="post-type-tab" data-type="EVENT" onclick="setPostType('EVENT',this)" style="flex:1;padding:10px;font-size:13px;font-weight:600;background:var(--card);color:var(--muted);border:none;border-left:1px solid var(--line);cursor:pointer;">Event</button>
         </div>
 
-        <form method="POST" action="{{ route('gbp-content.posts.store') }}" enctype="multipart/form-data">
+        <form method="POST" id="post-form" action="{{ route('gbp-content.posts.store') }}" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="type" id="post-type-input" value="UPDATE">
 
@@ -206,7 +216,23 @@ function switchTab(tab, btn){
 }
 
 function openPostModal(){
+    document.getElementById('post-form').action = "{{ route('gbp-content.posts.store') }}";
+    document.getElementById('post-modal-title').textContent = 'Add Post';
+    document.getElementById('post-body').value = '';
+    document.getElementById('char-count').textContent = '0 / 1500';
+    document.querySelector('#post-form input[name=cta_url]').value = '';
+    if(document.getElementById('clearImg')) clearImg();
     setPostType('UPDATE', document.querySelector('.post-type-tab[data-type="UPDATE"]'));
+    document.getElementById('post-modal').classList.add('open');
+}
+
+function openEditPost(p){
+    document.getElementById('post-form').action = "{{ url('gbp-content/posts') }}/" + p.id;
+    document.getElementById('post-modal-title').textContent = 'Edit Post';
+    document.getElementById('post-body').value = p.body || '';
+    document.getElementById('char-count').textContent = (p.body||'').length + ' / 1500';
+    document.querySelector('#post-form input[name=cta_url]').value = p.cta_url || '';
+    setPostType(p.type, document.querySelector('.post-type-tab[data-type="'+p.type+'"]'));
     document.getElementById('post-modal').classList.add('open');
 }
 

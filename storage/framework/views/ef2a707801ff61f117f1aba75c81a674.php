@@ -82,8 +82,10 @@
         .page-head p{font-size:13.5px;color:var(--muted);margin-top:4px;}
         .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;border:none;background:var(--teal);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit;}
         .btn:hover{background:var(--teal-ink);}
-        .btn-ghost{background:var(--card);border:1px solid var(--line);color:var(--ink);}
-        .btn-ghost:hover{border-color:#d3d9e8;background:var(--card);}
+        .btn-ghost{background:var(--card);border:1px solid var(--line);color:var(--ink);transition:border-color .12s,background .12s,color .12s,transform .1s;}
+        .btn-ghost:hover{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-ink);transform:translateY(-1px);}
+        .icon-btn{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--card);display:inline-grid;place-items:center;cursor:pointer;color:var(--muted);font-size:14px;transition:border-color .12s,background .12s,color .12s;vertical-align:middle;margin-left:2px;}
+        .icon-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft);}
         .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
         .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
         .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);}
@@ -208,9 +210,15 @@
         </div>
         <div>
             <div class="hdr-user-name"><?php echo e(auth()->user()->name); ?></div>
-            <div class="hdr-user-role"><?php echo e(auth()->user()->isAdmin() ? 'Admin' : ucfirst(strtolower(str_replace('_',' ',auth()->user()->role)))); ?></div>
+            <div class="hdr-user-role"><?php echo e(auth()->user()->isAdmin() ? 'Admin' : ucwords(strtolower(str_replace('_',' ',auth()->user()->role)))); ?></div>
         </div>
     </a>
+
+    <form method="POST" action="<?php echo e(route('logout')); ?>" style="margin:0;"><?php echo csrf_field(); ?>
+        <button class="hdr-btn" type="submit" title="Sign out" style="width:auto;padding:0 12px;gap:6px;font-size:13px;font-weight:600;">
+            <span style="font-size:15px;">&#8677;</span> Sign out
+        </button>
+    </form>
 </div>
 
 
@@ -297,6 +305,7 @@
         <a href="<?php echo e(route('plans')); ?>" class="nav-item <?php echo e(request()->routeIs('plans') ? 'active' : ''); ?>"><span class="ic">&#11014;</span> Plans &amp; Upgrade</a>
         <a href="<?php echo e(route('client-billing')); ?>" class="nav-item <?php echo e(request()->routeIs('client-billing') ? 'active' : ''); ?>"><span class="ic">&#128179;</span> Billing &amp; Invoices</a>
         <a href="<?php echo e(route('credits')); ?>" class="nav-item <?php echo e(request()->routeIs('credits') ? 'active' : ''); ?>"><span class="ic">&#9889;</span> Credits</a>
+        <a href="<?php echo e(route('buy-credits')); ?>" class="nav-item <?php echo e(request()->routeIs('buy-credits') ? 'active' : ''); ?>"><span class="ic">&#128722;</span> Buy Credits</a>
         <a href="<?php echo e(route('invoices')); ?>" class="nav-item <?php echo e(request()->routeIs('invoices') || request()->routeIs('invoices.*') ? 'active' : ''); ?>"><span class="ic">&#129534;</span> Invoices</a>
         <a href="<?php echo e(route('customers')); ?>" class="nav-item <?php echo e(request()->routeIs('customers') ? 'active' : ''); ?>"><span class="ic">&#128101;</span> Customers</a>
         <a href="<?php echo e(route('services')); ?>" class="nav-item <?php echo e(request()->routeIs('services') ? 'active' : ''); ?>"><span class="ic">&#128230;</span> Services</a>

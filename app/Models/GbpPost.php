@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class GbpPost extends Model
 {
     protected $fillable = [
-        'gbp_location_id', 'type', 'body', 'cta_url', 'status', 'scheduled_at', 'published_at',
+        'gbp_location_id', 'type', 'body', 'image', 'cta_url', 'status', 'scheduled_at', 'published_at',
     ];
 
     protected $casts = [

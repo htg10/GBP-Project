@@ -20,11 +20,16 @@ class SocialController extends Controller
     public function index(Request $request)
     {
         $aid = $request->user()->agency_id;
-        $posts = SocialPost::where('agency_id', $aid)->latest()->get();
-        $clients = Client::where('agency_id', $aid)->get();
+        $clientId = $request->user()->client_id;
+        $posts = SocialPost::where('agency_id', $aid)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->with('client')->latest()->get();
+        $clients = Client::where('agency_id', $aid)
+            ->when($clientId, fn ($q) => $q->where('id', $clientId))->get();
 
         $liveCount = \App\Models\Integration::where('agency_id', $aid)
-            ->where('provider', 'META_GRAPH')->whereNotNull('access_token')->count();
+            ->where('provider', 'META_GRAPH')->whereNotNull('access_token')
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))->count();
 
         return view('dashboard.social', compact('posts', 'clients', 'liveCount'));
     }
@@ -40,6 +45,9 @@ class SocialController extends Controller
         ]);
 
         $agencyId = $request->user()->agency_id;
+        if ($request->user()->client_id) {
+            $data['client_id'] = $request->user()->client_id;
+        }
         $client = Client::where('agency_id', $agencyId)->findOrFail($data['client_id']);
 
         $post = SocialPost::create([

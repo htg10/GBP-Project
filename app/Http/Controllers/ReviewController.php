@@ -48,7 +48,30 @@ class ReviewController extends Controller
             ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
             ->pluck('client_id')->all();
 
-        return view('dashboard.reviews', compact('locations', 'connectedClientIds'));
+        $sub = \App\Models\Subscription::where('agency_id', $agencyId)->first();
+        $settings = [
+            'auto_reply' => (bool) ($sub->auto_reply ?? false),
+            'wa_notify' => (bool) ($sub->wa_notify ?? false),
+        ];
+
+        return view('dashboard.reviews', compact('locations', 'connectedClientIds', 'settings'));
+    }
+
+    /** Persist the WhatsApp-notify / auto-reply toggles for the agency. */
+    public function updateSettings(Request $request)
+    {
+        $data = $request->validate([
+            'auto_reply' => 'nullable|boolean',
+            'wa_notify' => 'nullable|boolean',
+        ]);
+
+        \App\Models\Subscription::where('agency_id', $request->user()->agency_id)
+            ->update([
+                'auto_reply' => $request->boolean('auto_reply'),
+                'wa_notify' => $request->boolean('wa_notify'),
+            ]);
+
+        return response()->json(['success' => true]);
     }
 
     /** Scoped review list + sync + reply, for a single location. */
@@ -90,10 +113,13 @@ class ReviewController extends Controller
             return back()->with('error', $reason ?? 'Google returned no reviews for this location yet (it may genuinely have none).');
         }
 
+        // Universal Auto Reply toggle — auto-generate + post replies for new reviews.
+        $autoReply = (bool) \App\Models\Subscription::where('agency_id', $agencyId)->value('auto_reply');
+
         $count = 0;
         foreach ($raw as $r) {
             $sentiment = $this->ai->analyzeSentiment($r['comment'] ?? '');
-            Review::updateOrCreate(
+            $review = Review::updateOrCreate(
                 ['google_review_id' => $r['reviewId']],
                 [
                     'agency_id' => $agencyId,
@@ -105,10 +131,18 @@ class ReviewController extends Controller
                     'review_time' => $r['time'],
                 ]
             );
+
+            // Auto-reply only to brand-new, unreplied reviews (if credits allow).
+            if ($autoReply && ! $review->reply_text && $this->creditService->canAfford($agencyId, 'ai_review_reply')) {
+                $reply = $this->ai->generateReviewReply($review->reviewer_name, $review->comment ?? '', $review->star_rating);
+                $this->gbp->putReply($location->client, $location->google_name, $review->google_review_id, $reply);
+                $review->update(['reply_text' => $reply, 'replied_at' => now(), 'replied_by' => $request->user()->id]);
+                $this->creditService->deduct($agencyId, $request->user()->id, 'ai_review_reply', 'Auto-reply');
+            }
             $count++;
         }
 
-        return back()->with('success', "Synced {$count} review(s).");
+        return back()->with('success', "Synced {$count} review(s)".($autoReply ? ' (auto-replied to new ones)' : '').'.');
     }
 
     public function generateReply(Request $request, Review $review)

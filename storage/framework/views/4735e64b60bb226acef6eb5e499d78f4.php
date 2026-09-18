@@ -1,8 +1,7 @@
-@extends('layouts.app')
-@section('title', 'Leads CRM')
-@section('content')
+<?php $__env->startSection('title', 'Leads CRM'); ?>
+<?php $__env->startSection('content'); ?>
 
-@php
+<?php
     $stageMeta = [
         'NEW'         => ['label' => 'New',          'clr' => '#4c6fff', 'ic' => '✦'],
         'CONTACTED'   => ['label' => 'Contacted',    'clr' => '#8b5cf6', 'ic' => '☎'],
@@ -17,73 +16,74 @@
     $converted = ($leads['CONVERTED'] ?? collect())->count();
     $active = $total - $converted - (($leads['LOST'] ?? collect())->count());
     $convRate = $total ? round($converted / $total * 100) : 0;
-@endphp
+?>
 
 <div class="page-head">
     <div><h1>Leads CRM</h1><p>Track every lead from first touch to conversion. Drag cards between stages.</p></div>
     <button class="btn" onclick="document.getElementById('lead-modal').classList.add('open')">+ Add Lead</button>
 </div>
 
-{{-- KPI row --}}
+
 <div class="lead-kpis">
-    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#4c6fff,#6b8afd);">◉</div><div><div class="lk-v">{{ $total }}</div><div class="lk-l">Total Leads</div></div></div>
-    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);">⚡</div><div><div class="lk-v">{{ $active }}</div><div class="lk-l">Active Pipeline</div></div></div>
-    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#22c55e,#4ade80);">✓</div><div><div class="lk-v">{{ $converted }}</div><div class="lk-l">Converted</div></div></div>
-    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">%</div><div><div class="lk-v">{{ $convRate }}%</div><div class="lk-l">Conversion Rate</div></div></div>
+    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#4c6fff,#6b8afd);">◉</div><div><div class="lk-v"><?php echo e($total); ?></div><div class="lk-l">Total Leads</div></div></div>
+    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);">⚡</div><div><div class="lk-v"><?php echo e($active); ?></div><div class="lk-l">Active Pipeline</div></div></div>
+    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#22c55e,#4ade80);">✓</div><div><div class="lk-v"><?php echo e($converted); ?></div><div class="lk-l">Converted</div></div></div>
+    <div class="lead-kpi"><div class="lk-ic" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">%</div><div><div class="lk-v"><?php echo e($convRate); ?>%</div><div class="lk-l">Conversion Rate</div></div></div>
 </div>
 
-{{-- Kanban board --}}
+
 <div class="kanban">
-    @foreach($stages as $stage)
-        @php $m = $stageMeta[$stage]; $col = $leads[$stage] ?? collect(); @endphp
-        <div class="kcol" data-stage="{{ $stage }}" ondragover="event.preventDefault();this.classList.add('drop')" ondragleave="this.classList.remove('drop')" ondrop="dropLead(event, this)">
-            <div class="kcol-head" style="--sc:{{ $m['clr'] }};">
-                <span class="kdot"></span> {{ $m['label'] }}
-                <span class="kcount">{{ $col->count() }}</span>
+    <?php $__currentLoopData = $stages; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $stage): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php $m = $stageMeta[$stage]; $col = $leads[$stage] ?? collect(); ?>
+        <div class="kcol" data-stage="<?php echo e($stage); ?>" ondragover="event.preventDefault();this.classList.add('drop')" ondragleave="this.classList.remove('drop')" ondrop="dropLead(event, this)">
+            <div class="kcol-head" style="--sc:<?php echo e($m['clr']); ?>;">
+                <span class="kdot"></span> <?php echo e($m['label']); ?>
+
+                <span class="kcount"><?php echo e($col->count()); ?></span>
             </div>
             <div class="kcol-body">
-                @forelse($col as $lead)
-                    <div class="lead-card" draggable="true" ondragstart="dragLead(event, {{ $lead->id }})" style="--sc:{{ $m['clr'] }};">
+                <?php $__empty_1 = true; $__currentLoopData = $col; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lead): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                    <div class="lead-card" draggable="true" ondragstart="dragLead(event, <?php echo e($lead->id); ?>)" style="--sc:<?php echo e($m['clr']); ?>;">
                         <div class="lc-top">
-                            <div class="lc-av">{{ strtoupper(substr($lead->name,0,1)) }}</div>
+                            <div class="lc-av"><?php echo e(strtoupper(substr($lead->name,0,1))); ?></div>
                             <div style="min-width:0;">
-                                <div class="lc-name">{{ $lead->name }}</div>
-                                <div class="lc-client">{{ $lead->client->name ?? '' }}</div>
+                                <div class="lc-name"><?php echo e($lead->name); ?></div>
+                                <div class="lc-client"><?php echo e($lead->client->name ?? ''); ?></div>
                             </div>
-                            <span class="lc-src" title="{{ ucfirst(strtolower(str_replace('_',' ',$lead->source))) }}">{{ $srcIcon[$lead->source] ?? '•' }}</span>
+                            <span class="lc-src" title="<?php echo e(ucfirst(strtolower(str_replace('_',' ',$lead->source)))); ?>"><?php echo e($srcIcon[$lead->source] ?? '•'); ?></span>
                         </div>
-                        @if($lead->phone || $lead->email)
+                        <?php if($lead->phone || $lead->email): ?>
                         <div class="lc-meta">
-                            @if($lead->phone)<span>✆ {{ $lead->phone }}</span>@endif
-                            @if($lead->email)<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">✉ {{ $lead->email }}</span>@endif
+                            <?php if($lead->phone): ?><span>✆ <?php echo e($lead->phone); ?></span><?php endif; ?>
+                            <?php if($lead->email): ?><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">✉ <?php echo e($lead->email); ?></span><?php endif; ?>
                         </div>
-                        @endif
+                        <?php endif; ?>
                         <div class="lc-foot">
-                            <span>{{ $lead->created_at->diffForHumans(null, true) }} ago</span>
-                            <select class="lc-move" onchange="moveLead({{ $lead->id }}, this.value)">
-                                @foreach($stages as $s)
-                                    <option value="{{ $s }}" {{ $s === $stage ? 'selected' : '' }}>{{ $stageMeta[$s]['label'] }}</option>
-                                @endforeach
+                            <span><?php echo e($lead->created_at->diffForHumans(null, true)); ?> ago</span>
+                            <select class="lc-move" onchange="moveLead(<?php echo e($lead->id); ?>, this.value)">
+                                <?php $__currentLoopData = $stages; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $s): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($s); ?>" <?php echo e($s === $stage ? 'selected' : ''); ?>><?php echo e($stageMeta[$s]['label']); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                     <div class="kempty">No leads</div>
-                @endforelse
+                <?php endif; ?>
             </div>
         </div>
-    @endforeach
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 </div>
 
-{{-- Add lead modal --}}
+
 <div class="modal-bg" id="lead-modal">
     <div class="modal">
         <h2>Add Lead</h2>
-        <form method="POST" action="{{ route('leads.store') }}">
-            @csrf
+        <form method="POST" action="<?php echo e(route('leads.store')); ?>">
+            <?php echo csrf_field(); ?>
             <label><span class="lbl">Client</span>
                 <select name="client_id" required>
-                    @foreach($clients as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
+                    <?php $__currentLoopData = $clients; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($c->id); ?>"><?php echo e($c->name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </select>
             </label>
             <label><span class="lbl">Lead name</span><input type="text" name="name" required></label>
@@ -108,7 +108,7 @@
     </div>
 </div>
 
-@push('head')
+<?php $__env->startPush('head'); ?>
 <style>
     .main{max-width:1240px;}
     .lead-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
@@ -139,8 +139,8 @@
     .kempty{text-align:center;color:var(--muted);font-size:12px;padding:20px 0;}
     @media (max-width:900px){ .lead-kpis{grid-template-columns:repeat(2,1fr);} }
 </style>
-@endpush
-@push('scripts')
+<?php $__env->stopPush(); ?>
+<?php $__env->startPush('scripts'); ?>
 <script>
 let draggedLead = null;
 function dragLead(e, id){ draggedLead = id; e.dataTransfer.effectAllowed='move'; }
@@ -150,12 +150,14 @@ function dropLead(e, col){
     draggedLead = null;
 }
 function moveLead(id, stage){
-    fetch("{{ url('leads') }}/"+id+"/move", {
+    fetch("<?php echo e(url('leads')); ?>/"+id+"/move", {
         method:'POST',
         headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json','Accept':'application/json'},
         body:JSON.stringify({stage})
     }).then(()=>location.reload());
 }
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\reviewflow-laravel\resources\views/dashboard/leads.blade.php ENDPATH**/ ?>

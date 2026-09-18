@@ -61,6 +61,31 @@ class TeamController extends Controller
         return back()->with('success', 'Team member added under your business.');
     }
 
+    public function update(Request $request, User $user)
+    {
+        $this->guard($request);
+        abort_unless($user->client_id === $request->user()->client_id, 403);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'role' => 'required|in:STAFF,MARKETING_MANAGER',
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        if (User::where('email', $data['email'])->where('id', '!=', $user->id)->exists()) {
+            return back()->withErrors(['email' => 'Email already in use']);
+        }
+
+        $user->name = $data['name'];
+        $user->email = $data['email'];
+        $user->role = $data['role'];
+        if (! empty($data['password'])) $user->password = $data['password'];
+        $user->save();
+
+        return back()->with('success', 'Team member updated.');
+    }
+
     public function destroy(Request $request, User $user)
     {
         $this->guard($request);

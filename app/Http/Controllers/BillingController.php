@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CreditPackage;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -79,6 +80,91 @@ class BillingController extends Controller
             'success',
             "You're now on the {$plan->name} plan — ".number_format($plan->credits).' AI credits allocated.'
         );
+    }
+
+    /** Client "Buy Credits" page — lists active packages. */
+    public function buyCredits(Request $request)
+    {
+        $packages = CreditPackage::where('is_active', true)->orderBy('sort')->orderBy('credits')->get();
+        $balance = $this->credits->balance($request->user()->agency_id);
+        $razorpayReady = $this->razorpay->configured();
+        $canManage = $this->canManage($request);
+        return view('dashboard.buy-credits', compact('packages', 'balance', 'razorpayReady', 'canManage'));
+    }
+
+    /** Instant buy (demo / no gateway) — ADDS credits to the balance. */
+    public function creditBuyInstant(Request $request)
+    {
+        abort_unless($this->canManage($request), 403, 'You are not allowed to buy credits.');
+        $data = $request->validate(['package' => 'required|exists:credit_packages,id']);
+        $pkg = CreditPackage::find($data['package']);
+
+        $new = $this->credits->add(
+            $request->user()->agency_id, $pkg->credits, 'credit_purchase',
+            "Bought {$pkg->name} ({$pkg->credits} credits)", $request->user()->id
+        );
+
+        return back()->with('success', number_format($pkg->credits)." credits added. New balance: ".number_format($new).".");
+    }
+
+    /** Razorpay: create order for a credit package. */
+    public function creditCheckout(Request $request)
+    {
+        abort_unless($this->canManage($request), 403);
+        $data = $request->validate(['package' => 'required|exists:credit_packages,id']);
+        $pkg = CreditPackage::find($data['package']);
+
+        if (! $this->razorpay->configured()) {
+            return response()->json(['error' => 'Razorpay keys missing in .env'], 422);
+        }
+
+        $order = $this->razorpay->createOrder($pkg->price, 'cr_'.$request->user()->agency_id.'_'.time());
+        if (! $order) {
+            return response()->json(['error' => 'Could not create order.'], 422);
+        }
+
+        Payment::create([
+            'agency_id' => $request->user()->agency_id,
+            'plan' => 'CREDITS-'.$pkg->credits,
+            'amount' => $pkg->price * 100,
+            'currency' => 'INR',
+            'razorpay_order_id' => $order['id'],
+            'status' => 'CREATED',
+        ]);
+
+        return response()->json([
+            'order_id' => $order['id'], 'amount' => $order['amount'], 'currency' => $order['currency'],
+            'package' => $pkg->id, 'name' => $pkg->name, 'key' => config('services.razorpay.key'),
+        ]);
+    }
+
+    /** Razorpay: verify + ADD the purchased credits. */
+    public function creditVerify(Request $request)
+    {
+        abort_unless($this->canManage($request), 403);
+        $data = $request->validate([
+            'razorpay_order_id' => 'required|string',
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_signature' => 'required|string',
+            'package' => 'required|exists:credit_packages,id',
+        ]);
+
+        $ok = $this->razorpay->verifySignature($data['razorpay_order_id'], $data['razorpay_payment_id'], $data['razorpay_signature']);
+        $payment = Payment::where('razorpay_order_id', $data['razorpay_order_id'])->first();
+
+        if (! $ok) {
+            if ($payment) $payment->update(['status' => 'FAILED']);
+            return response()->json(['error' => 'Payment verification failed'], 422);
+        }
+        if ($payment) $payment->update(['razorpay_payment_id' => $data['razorpay_payment_id'], 'status' => 'PAID']);
+
+        $pkg = CreditPackage::find($data['package']);
+        $this->credits->add(
+            $request->user()->agency_id, $pkg->credits, 'credit_purchase',
+            "Bought {$pkg->name} ({$pkg->credits} credits)", $request->user()->id
+        );
+
+        return response()->json(['success' => true]);
     }
 
     public function topup(Request $request)
