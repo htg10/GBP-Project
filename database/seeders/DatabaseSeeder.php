@@ -4,8 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Agency;
 use App\Models\User;
-use App\Models\Client;
-use App\Models\GbpLocation;
 use App\Models\Plan;
 use App\Models\CreditPackage;
 use App\Models\Subscription;
@@ -30,27 +28,6 @@ class DatabaseSeeder extends Seeder
             ['plan' => 'GROWTH', 'status' => 'ACTIVE']
         );
 
-        $client = Client::firstOrCreate(
-            ['agency_id' => $agency->id, 'name' => 'Bright Smile Dental'],
-            ['industry' => 'Healthcare', 'email' => 'hello@brightsmile.in']
-        );
-
-        // Client Owner (sees only their own client's live GBP data).
-        User::updateOrCreate(
-            ['agency_id' => $agency->id, 'email' => 'client@demo.com'],
-            ['name' => 'Bright Smile Owner', 'role' => 'CLIENT_OWNER', 'client_id' => $client->id, 'password' => Hash::make('clientpass123')]
-        );
-        // Staff bound to that client.
-        User::updateOrCreate(
-            ['agency_id' => $agency->id, 'email' => 'staff@demo.com'],
-            ['name' => 'Staff User', 'role' => 'STAFF', 'client_id' => $client->id, 'password' => Hash::make('staff123')]
-        );
-
-        GbpLocation::firstOrCreate(
-            ['client_id' => $client->id, 'google_name' => 'accounts/123/locations/456'],
-            ['title' => 'Bright Smile Dental — Ghaziabad', 'address' => 'Ghaziabad, Uttar Pradesh']
-        );
-
         // ---- Plans (Super Admin managed, GST-inclusive) ----
         $this->seedPlans();
 
@@ -66,8 +43,6 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('Seeded!');
         $this->command->info('  SUPER ADMIN: admin@demo.com / admin123');
-        $this->command->info('  CLIENT OWNER: client@demo.com / clientpass123');
-        $this->command->info('  STAFF: staff@demo.com / staff123');
     }
 
     private function seedPlans(): void

@@ -94,6 +94,9 @@ class AdminController extends Controller
     public function destroyUser(Request $request, User $user)
     {
         abort_unless($user->agency_id === $request->user()->agency_id, 403);
+        if ($user->role === 'SUPER_ADMIN') {
+            return back()->withErrors(['user' => 'Super Admin accounts cannot be deleted.']);
+        }
         if ($user->id === $request->user()->id) {
             return back()->withErrors(['user' => 'You cannot delete your own account.']);
         }

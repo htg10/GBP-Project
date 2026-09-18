@@ -18,9 +18,11 @@
                     <td style="font-size:13px;">{{ $u->client->name ?? '— All agency —' }}</td>
                     <td style="text-align:right;">
                         <button class="icon-btn" onclick='openEdit(@json($u))'>✎</button>
+                        @if($u->role !== 'SUPER_ADMIN')
                         <form method="POST" action="{{ route('admin.users.destroy', $u) }}" style="display:inline;" onsubmit="return confirm('Delete this user?')">
                             @csrf @method('DELETE')<button class="icon-btn" style="color:var(--rose);">🗑</button>
                         </form>
+                        @endif
                     </td>
                 </tr>
             @empty
