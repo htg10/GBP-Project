@@ -33,6 +33,13 @@ use App\Http\Controllers\BillingController;
 // ---- Guest ----
 Route::get('/', fn () => view('welcome'))->name('home');
 
+// Policy pages (public)
+Route::get('/pricing-policy', fn () => view('policies.pricing'))->name('policy.pricing');
+Route::get('/shipping-policy', fn () => view('policies.shipping'))->name('policy.shipping');
+Route::get('/terms-and-conditions', fn () => view('policies.terms'))->name('policy.terms');
+Route::get('/privacy-policy', fn () => view('policies.privacy'))->name('policy.privacy');
+Route::get('/cancellation-refund-policy', fn () => view('policies.refund'))->name('policy.refund');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);

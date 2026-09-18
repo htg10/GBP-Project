@@ -333,6 +333,13 @@ a{text-decoration:none;color:inherit;}
 
 <footer class="footer">
     <div class="nav-brand"><div class="nav-brand-icon" style="width:30px;height:30px;font-size:14px;">R</div><strong style="font-size:16px;">ReviewFlow</strong></div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin:14px 0 10px;">
+        <a href="{{ route('policy.pricing') }}" style="font-size:13px;color:#5a6478;">Pricing Policy</a>
+        <a href="{{ route('policy.shipping') }}" style="font-size:13px;color:#5a6478;">Shipping Policy</a>
+        <a href="{{ route('policy.terms') }}" style="font-size:13px;color:#5a6478;">Terms & Conditions</a>
+        <a href="{{ route('policy.privacy') }}" style="font-size:13px;color:#5a6478;">Privacy Policy</a>
+        <a href="{{ route('policy.refund') }}" style="font-size:13px;color:#5a6478;">Cancellation / Refund</a>
+    </div>
     <div>&copy; {{ date('Y') }} ReviewFlow. All rights reserved.</div>
 </footer>
 
