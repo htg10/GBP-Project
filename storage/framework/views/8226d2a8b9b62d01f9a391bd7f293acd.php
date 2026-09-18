@@ -214,8 +214,8 @@
         </div>
     </a>
 
-    <form method="POST" action="<?php echo e(route('logout')); ?>" style="margin:0;"><?php echo csrf_field(); ?>
-        <button class="hdr-btn" type="submit" title="Sign out" style="width:auto;padding:0 12px;gap:6px;font-size:13px;font-weight:600;">
+    <form method="POST" action="<?php echo e(route('logout')); ?>" style="margin:0;display:flex;align-items:center;"><?php echo csrf_field(); ?>
+        <button class="hdr-btn" type="submit" title="Sign out" style="width:auto;height:36px;padding:0 14px;gap:6px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;">
             <span style="font-size:15px;">&#8677;</span> Sign out
         </button>
     </form>
@@ -285,11 +285,11 @@
         <a href="<?php echo e(route('dashboard')); ?>" class="nav-item <?php echo e(request()->routeIs('dashboard') ? 'active' : ''); ?>"><span class="ic">&#9638;</span> Overview</a>
         <a href="<?php echo e(route('optimize')); ?>" class="nav-item <?php echo e(request()->routeIs('optimize') ? 'active' : ''); ?>"><span class="ic">&#9889;</span> One-Click Optimize</a>
         <a href="<?php echo e(route('ai')); ?>" class="nav-item <?php echo e(request()->routeIs('ai') ? 'active' : ''); ?>"><span class="ic">&#10022;</span> AI Mode</a>
+        <?php if(auth()->user()->isAdmin()): ?>
         <a href="<?php echo e(route('clients')); ?>" class="nav-item <?php echo e(request()->routeIs('clients') || request()->routeIs('clients.show') ? 'active' : ''); ?>"><span class="ic">&#127970;</span> Clients</a>
-        <?php if(auth()->user()->role === 'CLIENT_OWNER'): ?>
-        <a href="<?php echo e(route('team')); ?>" class="nav-item <?php echo e(request()->routeIs('team') ? 'active' : ''); ?>"><span class="ic">&#128101;</span> My Team</a>
         <?php endif; ?>
         <a href="<?php echo e(route('reviews')); ?>" class="nav-item <?php echo e(request()->routeIs('reviews') || request()->routeIs('reviews.show') ? 'active' : ''); ?>"><span class="ic">&#9733;</span> Reviews</a>
+        <a href="<?php echo e(route('insights')); ?>" class="nav-item <?php echo e(request()->routeIs('insights') ? 'active' : ''); ?>"><span class="ic">&#128200;</span> Insights</a>
         <a href="<?php echo e(route('gbp-content')); ?>" class="nav-item <?php echo e(request()->routeIs('gbp-content') ? 'active' : ''); ?>"><span class="ic">&#128444;</span> Posts & Photos</a>
         <a href="<?php echo e(route('ai-media')); ?>" class="nav-item <?php echo e(request()->routeIs('ai-media') ? 'active' : ''); ?>"><span class="ic">&#127912;</span> AI Generated Media</a>
         <a href="<?php echo e(route('audit')); ?>" class="nav-item <?php echo e(request()->routeIs('audit') ? 'active' : ''); ?>"><span class="ic">&#9678;</span> Google Audit</a>
@@ -306,12 +306,6 @@
         <a href="<?php echo e(route('client-billing')); ?>" class="nav-item <?php echo e(request()->routeIs('client-billing') ? 'active' : ''); ?>"><span class="ic">&#128179;</span> Billing &amp; Invoices</a>
         <a href="<?php echo e(route('credits')); ?>" class="nav-item <?php echo e(request()->routeIs('credits') ? 'active' : ''); ?>"><span class="ic">&#9889;</span> Credits</a>
         <a href="<?php echo e(route('buy-credits')); ?>" class="nav-item <?php echo e(request()->routeIs('buy-credits') ? 'active' : ''); ?>"><span class="ic">&#128722;</span> Buy Credits</a>
-        <a href="<?php echo e(route('invoices')); ?>" class="nav-item <?php echo e(request()->routeIs('invoices') || request()->routeIs('invoices.*') ? 'active' : ''); ?>"><span class="ic">&#129534;</span> Invoices</a>
-        <a href="<?php echo e(route('customers')); ?>" class="nav-item <?php echo e(request()->routeIs('customers') ? 'active' : ''); ?>"><span class="ic">&#128101;</span> Customers</a>
-        <a href="<?php echo e(route('services')); ?>" class="nav-item <?php echo e(request()->routeIs('services') ? 'active' : ''); ?>"><span class="ic">&#128230;</span> Services</a>
-        <a href="<?php echo e(route('service-categories')); ?>" class="nav-item <?php echo e(request()->routeIs('service-categories') ? 'active' : ''); ?>"><span class="ic">&#128193;</span> Categories</a>
-        <a href="<?php echo e(route('expenses')); ?>" class="nav-item <?php echo e(request()->routeIs('expenses') ? 'active' : ''); ?>"><span class="ic">&#128198;</span> Expenses</a>
-        <a href="<?php echo e(route('tally-export')); ?>" class="nav-item <?php echo e(request()->routeIs('tally-export') || request()->routeIs('tally-export.*') ? 'active' : ''); ?>"><span class="ic">&#128228;</span> Tally Export</a>
         <a href="<?php echo e(route('billing-settings')); ?>" class="nav-item <?php echo e(request()->routeIs('billing-settings') ? 'active' : ''); ?>"><span class="ic">&#9881;</span> Billing Settings</a>
 
         <div class="nav-spacer"></div>

@@ -77,18 +77,18 @@ body{font-family:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;min-he
         <h2>Create Your Business</h2>
         <p class="sub">Start managing your business presence</p>
 
-        @if($errors->any())<div class="err">{{ $errors->first() }}</div>@endif
+        <?php if($errors->any()): ?><div class="err"><?php echo e($errors->first()); ?></div><?php endif; ?>
 
-        <form method="POST" action="{{ route('register') }}">
-            @csrf
+        <form method="POST" action="<?php echo e(route('register')); ?>">
+            <?php echo csrf_field(); ?>
             <label class="form-label">Business Name</label>
-            <input class="form-input" type="text" name="agency_name" value="{{ old('agency_name') }}" placeholder="Your Business Name" required>
+            <input class="form-input" type="text" name="agency_name" value="<?php echo e(old('agency_name')); ?>" placeholder="Your Business Name" required>
 
             <label class="form-label">Your Name</label>
-            <input class="form-input" type="text" name="name" value="{{ old('name') }}" placeholder="Full Name" required>
+            <input class="form-input" type="text" name="name" value="<?php echo e(old('name')); ?>" placeholder="Full Name" required>
 
             <label class="form-label">Email Address</label>
-            <input class="form-input" type="email" name="email" value="{{ old('email') }}" placeholder="you@company.com" required>
+            <input class="form-input" type="email" name="email" value="<?php echo e(old('email')); ?>" placeholder="you@company.com" required>
 
             <label class="form-label">Password</label>
             <input class="form-input" type="password" name="password" placeholder="Min 8 characters" required>
@@ -98,18 +98,19 @@ body{font-family:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;min-he
 
         <div class="divider">or sign up with</div>
 
-        <button class="btn-google" type="button" onclick="window.location.href='{{ route('google.login') }}'">
+        <button class="btn-google" type="button" onclick="window.location.href='<?php echo e(route('google.login')); ?>'">
             <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
             Sign up with Google
         </button>
 
         <div class="login-link">
-            Already have an account? <a href="{{ route('login') }}">Sign In &rsaquo;</a>
+            Already have an account? <a href="<?php echo e(route('login')); ?>">Sign In &rsaquo;</a>
         </div>
 
-        <div class="copy">&copy; {{ date('Y') }} ReviewFlow. All rights reserved.</div>
+        <div class="copy">&copy; <?php echo e(date('Y')); ?> ReviewFlow. All rights reserved.</div>
     </div>
 </div>
 
 </body>
 </html>
+<?php /**PATH D:\reviewflow-laravel\resources\views/auth/register.blade.php ENDPATH**/ ?>

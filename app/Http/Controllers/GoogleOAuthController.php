@@ -34,6 +34,10 @@ class GoogleOAuthController extends Controller
     {
         abort_unless($client->agency_id === $request->user()->agency_id, 403);
 
+        if (! $request->user()->email_verified_at) {
+            return back()->with('error', 'Please verify your email address before connecting Google Business Profile.');
+        }
+
         if (! $this->configured()) {
             return back()->with('error', 'Google is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env first.');
         }

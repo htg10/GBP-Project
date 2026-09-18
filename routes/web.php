@@ -216,6 +216,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/ai', [AiModeController::class, 'index'])->name('ai');
     Route::post('/ai/send', [AiModeController::class, 'send'])->name('ai.send');
 
+    // Insights (GBP performance metrics)
+    Route::get('/insights', [\App\Http\Controllers\InsightsController::class, 'index'])->name('insights');
+    Route::get('/insights/download', [\App\Http\Controllers\InsightsController::class, 'download'])->name('insights.download');
+
     // Google Audit
     Route::get('/audit', [AuditController::class, 'index'])->name('audit');
     Route::post('/audit/run', [AuditController::class, 'run'])->name('audit.run');

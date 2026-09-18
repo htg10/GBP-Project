@@ -214,8 +214,8 @@
         </div>
     </a>
 
-    <form method="POST" action="{{ route('logout') }}" style="margin:0;">@csrf
-        <button class="hdr-btn" type="submit" title="Sign out" style="width:auto;padding:0 12px;gap:6px;font-size:13px;font-weight:600;">
+    <form method="POST" action="{{ route('logout') }}" style="margin:0;display:flex;align-items:center;">@csrf
+        <button class="hdr-btn" type="submit" title="Sign out" style="width:auto;height:36px;padding:0 14px;gap:6px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;">
             <span style="font-size:15px;">&#8677;</span> Sign out
         </button>
     </form>
@@ -285,11 +285,11 @@
         <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}"><span class="ic">&#9638;</span> Overview</a>
         <a href="{{ route('optimize') }}" class="nav-item {{ request()->routeIs('optimize') ? 'active' : '' }}"><span class="ic">&#9889;</span> One-Click Optimize</a>
         <a href="{{ route('ai') }}" class="nav-item {{ request()->routeIs('ai') ? 'active' : '' }}"><span class="ic">&#10022;</span> AI Mode</a>
+        @if(auth()->user()->isAdmin())
         <a href="{{ route('clients') }}" class="nav-item {{ request()->routeIs('clients') || request()->routeIs('clients.show') ? 'active' : '' }}"><span class="ic">&#127970;</span> Clients</a>
-        @if(auth()->user()->role === 'CLIENT_OWNER')
-        <a href="{{ route('team') }}" class="nav-item {{ request()->routeIs('team') ? 'active' : '' }}"><span class="ic">&#128101;</span> My Team</a>
         @endif
         <a href="{{ route('reviews') }}" class="nav-item {{ request()->routeIs('reviews') || request()->routeIs('reviews.show') ? 'active' : '' }}"><span class="ic">&#9733;</span> Reviews</a>
+        <a href="{{ route('insights') }}" class="nav-item {{ request()->routeIs('insights') ? 'active' : '' }}"><span class="ic">&#128200;</span> Insights</a>
         <a href="{{ route('gbp-content') }}" class="nav-item {{ request()->routeIs('gbp-content') ? 'active' : '' }}"><span class="ic">&#128444;</span> Posts & Photos</a>
         <a href="{{ route('ai-media') }}" class="nav-item {{ request()->routeIs('ai-media') ? 'active' : '' }}"><span class="ic">&#127912;</span> AI Generated Media</a>
         <a href="{{ route('audit') }}" class="nav-item {{ request()->routeIs('audit') ? 'active' : '' }}"><span class="ic">&#9678;</span> Google Audit</a>
@@ -306,12 +306,6 @@
         <a href="{{ route('client-billing') }}" class="nav-item {{ request()->routeIs('client-billing') ? 'active' : '' }}"><span class="ic">&#128179;</span> Billing &amp; Invoices</a>
         <a href="{{ route('credits') }}" class="nav-item {{ request()->routeIs('credits') ? 'active' : '' }}"><span class="ic">&#9889;</span> Credits</a>
         <a href="{{ route('buy-credits') }}" class="nav-item {{ request()->routeIs('buy-credits') ? 'active' : '' }}"><span class="ic">&#128722;</span> Buy Credits</a>
-        <a href="{{ route('invoices') }}" class="nav-item {{ request()->routeIs('invoices') || request()->routeIs('invoices.*') ? 'active' : '' }}"><span class="ic">&#129534;</span> Invoices</a>
-        <a href="{{ route('customers') }}" class="nav-item {{ request()->routeIs('customers') ? 'active' : '' }}"><span class="ic">&#128101;</span> Customers</a>
-        <a href="{{ route('services') }}" class="nav-item {{ request()->routeIs('services') ? 'active' : '' }}"><span class="ic">&#128230;</span> Services</a>
-        <a href="{{ route('service-categories') }}" class="nav-item {{ request()->routeIs('service-categories') ? 'active' : '' }}"><span class="ic">&#128193;</span> Categories</a>
-        <a href="{{ route('expenses') }}" class="nav-item {{ request()->routeIs('expenses') ? 'active' : '' }}"><span class="ic">&#128198;</span> Expenses</a>
-        <a href="{{ route('tally-export') }}" class="nav-item {{ request()->routeIs('tally-export') || request()->routeIs('tally-export.*') ? 'active' : '' }}"><span class="ic">&#128228;</span> Tally Export</a>
         <a href="{{ route('billing-settings') }}" class="nav-item {{ request()->routeIs('billing-settings') ? 'active' : '' }}"><span class="ic">&#9881;</span> Billing Settings</a>
 
         <div class="nav-spacer"></div>

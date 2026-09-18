@@ -25,6 +25,8 @@
             <form method="POST" action="<?php echo e(route('dashboard.sync')); ?>" style="display:inline;"><?php echo csrf_field(); ?>
                 <button type="submit" class="rf-hero-btn primary">⟳ Sync Live Data</button>
             </form>
+        <?php elseif(!auth()->user()->email_verified_at): ?>
+            <span class="rf-hero-btn" style="opacity:.7;cursor:default;" title="Verify your email first">✉ Verify Email to Connect</span>
         <?php else: ?>
             <a href="<?php echo e(route('clients')); ?>" class="rf-hero-btn primary">🔗 Connect Google</a>
         <?php endif; ?>
@@ -265,7 +267,7 @@
     .rf-info{color:#c7d0e8;font-size:13px;cursor:help;}
     .rf-rating-row{display:flex;align-items:center;gap:18px;}
     .rf-donut-wrap{position:relative;width:150px;height:150px;flex-shrink:0;}
-    .rf-donut-center{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none;}
+    .rf-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;}
     .rf-donut-big{font-size:30px;font-weight:800;line-height:1;}
     .rf-donut-small{font-size:11px;color:var(--muted);margin-top:3px;}
     .rf-bars{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}

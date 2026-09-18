@@ -47,7 +47,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:SUPER_ADMIN,CLIENT_OWNER,MARKETING_MANAGER,STAFF',
+            'role' => 'required|in:SUPER_ADMIN,CLIENT_OWNER',
             'client_id' => 'nullable|exists:clients,id',
         ]);
         if (User::where('email', $data['email'])->exists()) {
@@ -56,7 +56,7 @@ class AdminController extends Controller
         $data['agency_id'] = $request->user()->agency_id;
         $data['client_id'] = $data['client_id'] ?: null;
 
-        // A Client Owner must own exactly one business — auto-create it if none chosen.
+        // A Client must own exactly one business — auto-create it if none chosen.
         if ($data['role'] === 'CLIENT_OWNER' && ! $data['client_id']) {
             $client = Client::create(['agency_id' => $data['agency_id'], 'name' => $data['name'], 'email' => $data['email']]);
             $data['client_id'] = $client->id;
@@ -72,7 +72,7 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email',
-            'role' => 'required|in:SUPER_ADMIN,CLIENT_OWNER,MARKETING_MANAGER,STAFF',
+            'role' => 'required|in:SUPER_ADMIN,CLIENT_OWNER',
             'password' => 'nullable|string|min:8',
             'client_id' => 'nullable|exists:clients,id',
         ]);

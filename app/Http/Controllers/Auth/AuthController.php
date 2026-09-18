@@ -42,13 +42,19 @@ class AuthController extends Controller
             'slug' => Str::slug($data['agency_name']).'-'.Str::lower(Str::random(5)),
         ]);
 
-        // First user of an agency becomes its owner.
+        $client = \App\Models\Client::create([
+            'agency_id' => $agency->id,
+            'name' => $data['agency_name'],
+            'email' => $data['email'],
+        ]);
+
         $user = User::create([
             'agency_id' => $agency->id,
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => $data['password'],
-            'role' => 'SUPER_ADMIN',
+            'role' => 'CLIENT_OWNER',
+            'client_id' => $client->id,
         ]);
 
         Subscription::create(['agency_id' => $agency->id, 'plan' => 'STARTER', 'status' => 'TRIALING']);
@@ -102,8 +108,14 @@ class AuthController extends Controller
         }
 
         $agency = Agency::create([
-            'name' => $googleUser->getName() . "'s Agency",
+            'name' => $googleUser->getName() . "'s Business",
             'slug' => Str::slug($googleUser->getName()) . '-' . Str::lower(Str::random(5)),
+        ]);
+
+        $client = \App\Models\Client::create([
+            'agency_id' => $agency->id,
+            'name' => $googleUser->getName() . "'s Business",
+            'email' => $googleUser->getEmail(),
         ]);
 
         $user = User::create([
@@ -111,7 +123,8 @@ class AuthController extends Controller
             'name' => $googleUser->getName(),
             'email' => $googleUser->getEmail(),
             'password' => Hash::make(Str::random(24)),
-            'role' => 'SUPER_ADMIN',
+            'role' => 'CLIENT_OWNER',
+            'client_id' => $client->id,
             'avatar' => $googleUser->getAvatar(),
         ]);
 

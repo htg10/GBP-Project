@@ -77,4 +77,13 @@ class GbpService
         }
         return true; // mock: pretend success
     }
+
+    public function fetchPerformanceMetrics(Client $client, string $locationName, string $startDate, string $endDate): array
+    {
+        $integration = $this->integrationFor($client);
+        if ($integration) {
+            return $this->real->fetchPerformanceMetrics($integration, $locationName, $startDate, $endDate);
+        }
+        return [];
+    }
 }

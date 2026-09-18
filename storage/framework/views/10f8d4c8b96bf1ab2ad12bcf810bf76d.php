@@ -10,9 +10,16 @@
 </div>
 
 <?php
-    $current = $sub->plan ?? null;
+    $isTrialing = ($sub->status ?? '') === 'TRIALING';
+    $current = $isTrialing ? null : ($sub->plan ?? null);
     $accent = ['#22c55e', '#4c6fff', '#8b5cf6', '#f59e0b', '#ec4899'];
 ?>
+
+<?php if($isTrialing): ?>
+<div class="alert info" style="margin-bottom:18px;">
+    <strong>No active plan yet.</strong> Choose a plan below to unlock all features and get your monthly AI credits.
+</div>
+<?php endif; ?>
 
 <?php if($plans->isEmpty()): ?>
     <div class="card"><div class="empty">No plans available yet. Ask your Super Admin to create one.</div></div>

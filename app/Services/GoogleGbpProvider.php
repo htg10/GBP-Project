@@ -242,6 +242,73 @@ class GoogleGbpProvider
         return true;
     }
 
+    /**
+     * Fetch performance metrics (interactions, impressions, etc.) for a location
+     * using the Business Profile Performance API.
+     * $locationName e.g. "locations/456" or "accounts/123/locations/456".
+     * Returns dailyMetricTimeSeries keyed by metric name.
+     */
+    public function fetchPerformanceMetrics(Integration $integration, string $locationName, string $startDate, string $endDate): array
+    {
+        $this->lastError = null;
+
+        $locPart = $locationName;
+        if (str_starts_with($locPart, 'accounts/')) {
+            $parts = explode('/', $locPart);
+            $locPart = 'locations/'.$parts[3];
+        }
+
+        $url = "https://businessprofileperformance.googleapis.com/v1/{$locPart}:fetchMultiDailyMetricsTimeSeries";
+
+        $dailyMetrics = [
+            'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',
+            'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH',
+            'BUSINESS_IMPRESSIONS_MOBILE_MAPS',
+            'BUSINESS_IMPRESSIONS_MOBILE_SEARCH',
+            'CALL_CLICKS',
+            'WEBSITE_CLICKS',
+            'BUSINESS_DIRECTION_REQUESTS',
+            'BUSINESS_BOOKINGS',
+        ];
+
+        try {
+            $res = $this->client($integration)->get($url, [
+                'dailyMetrics' => $dailyMetrics,
+                'dailyRange.startDate.year' => (int) substr($startDate, 0, 4),
+                'dailyRange.startDate.month' => (int) substr($startDate, 5, 2),
+                'dailyRange.startDate.day' => (int) substr($startDate, 8, 2),
+                'dailyRange.endDate.year' => (int) substr($endDate, 0, 4),
+                'dailyRange.endDate.month' => (int) substr($endDate, 5, 2),
+                'dailyRange.endDate.day' => (int) substr($endDate, 8, 2),
+            ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::warning("GBP fetchPerformanceMetrics timed out: ".$e->getMessage());
+            $this->lastError = 'Google took too long to respond.';
+            return [];
+        }
+
+        if (! $res->successful()) {
+            Log::warning('GBP fetchPerformanceMetrics failed: '.$res->status().' '.$res->body());
+            $this->lastError = $this->describeFailure($res);
+            return [];
+        }
+
+        $metrics = [];
+        foreach ($res->json('multiDailyMetricTimeSeries', []) as $series) {
+            foreach ($series['dailyMetricTimeSeries'] ?? [] as $ts) {
+                $metricName = $ts['dailyMetric'] ?? 'UNKNOWN';
+                $dataPoints = [];
+                foreach ($ts['timeSeries']['datedValues'] ?? [] as $dv) {
+                    $date = sprintf('%04d-%02d-%02d', $dv['date']['year'], $dv['date']['month'], $dv['date']['day']);
+                    $dataPoints[$date] = (int) ($dv['value'] ?? 0);
+                }
+                $metrics[$metricName] = $dataPoints;
+            }
+        }
+
+        return $metrics;
+    }
+
     /** Upload a media item (photo) to a location. $sourceUrl must be a real, publicly fetchable URL — Google fetches it server-side. */
     public function uploadPhoto(Integration $integration, string $locationName, string $sourceUrl, ?string $description = null): bool
     {
