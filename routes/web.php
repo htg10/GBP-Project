@@ -71,37 +71,43 @@ Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\EmailVerificationC
     ->middleware('signed')
     ->name('verification.verify');
 
-// ---- Authenticated (all users) ----
+// ---- Authenticated — always accessible (plans, billing, profile, email) ----
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::post('/dashboard/sync', [DashboardController::class, 'syncAll'])->name('dashboard.sync');
-
-    // Plans & upgrade (account owner / admin) — user-facing self-serve upgrade
+    // Plans & upgrade — user-facing self-serve upgrade
     Route::get('/plans', [BillingController::class, 'plans'])->name('plans');
     Route::post('/plans/upgrade', [BillingController::class, 'upgrade'])->name('plans.upgrade');
-    // Razorpay checkout for self-serve upgrade
     Route::post('/plans/checkout', [BillingController::class, 'checkout'])->name('plans.checkout');
     Route::post('/plans/verify', [BillingController::class, 'verify'])->name('plans.verify');
 
-    // Client team management (Client Owner adds Staff / Marketing Managers)
+    // Email verification
+    Route::post('/email/send-verification', [App\Http\Controllers\EmailVerificationController::class, 'send'])->name('verification.send');
+    Route::post('/email/change', [App\Http\Controllers\EmailVerificationController::class, 'changeEmail'])->name('email.change');
+
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    // Client billing (payment history)
+    Route::get('/billing', [\App\Http\Controllers\ClientBillingController::class, 'index'])->name('client-billing');
+    Route::get('/billing/invoice/{payment}', [\App\Http\Controllers\ClientBillingController::class, 'invoice'])->name('client-billing.invoice');
+});
+
+// ---- Authenticated + active plan required ----
+Route::middleware(['auth', 'plan'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/sync', [DashboardController::class, 'syncAll'])->name('dashboard.sync');
+
+    // Client team management
     Route::get('/team', [\App\Http\Controllers\TeamController::class, 'index'])->name('team');
     Route::post('/team', [\App\Http\Controllers\TeamController::class, 'store'])->name('team.store');
     Route::post('/team/{user}', [\App\Http\Controllers\TeamController::class, 'update'])->name('team.update');
     Route::delete('/team/{user}', [\App\Http\Controllers\TeamController::class, 'destroy'])->name('team.destroy');
 
-    // Client billing (subscription payment history + PDF invoices)
-    Route::get('/billing', [\App\Http\Controllers\ClientBillingController::class, 'index'])->name('client-billing');
-    Route::get('/billing/invoice/{payment}', [\App\Http\Controllers\ClientBillingController::class, 'invoice'])->name('client-billing.invoice');
-
-    // Buy credits (client tops up when their credits run low)
+    // Buy credits
     Route::get('/buy-credits', [BillingController::class, 'buyCredits'])->name('buy-credits');
     Route::post('/buy-credits/instant', [BillingController::class, 'creditBuyInstant'])->name('buy-credits.instant');
     Route::post('/buy-credits/checkout', [BillingController::class, 'creditCheckout'])->name('buy-credits.checkout');
     Route::post('/buy-credits/verify', [BillingController::class, 'creditVerify'])->name('buy-credits.verify');
-
-    // Email verification
-    Route::post('/email/send-verification', [App\Http\Controllers\EmailVerificationController::class, 'send'])->name('verification.send');
-    Route::post('/email/change', [App\Http\Controllers\EmailVerificationController::class, 'changeEmail'])->name('email.change');
 
     // Clients
     Route::get('/clients', [ClientController::class, 'index'])->name('clients');
@@ -117,7 +123,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/clients/{client}/google/disconnect', [GoogleOAuthController::class, 'disconnect'])->name('google.disconnect');
     Route::post('/clients/{client}/google/import-locations', [ClientController::class, 'importLocations'])->name('clients.import-locations');
 
-    // Reviews (GBP) — card grid of locations, then a scoped view per location.
+    // Reviews (GBP)
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
     Route::post('/reviews/settings', [ReviewController::class, 'updateSettings'])->name('reviews.settings');
     Route::get('/reviews/{location}', [ReviewController::class, 'show'])->name('reviews.show');
@@ -142,7 +148,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
     Route::post('/leads/{lead}/move', [LeadController::class, 'move'])->name('leads.move');
 
-    // Meta connect (OAuth) — mirrors Google connect, per client.
+    // Meta connect (OAuth)
     Route::get('/clients/{client}/meta/connect', [MetaOAuthController::class, 'connect'])->name('meta.connect');
     Route::delete('/clients/{client}/meta/disconnect', [MetaOAuthController::class, 'disconnect'])->name('meta.disconnect');
 
@@ -227,10 +233,6 @@ Route::middleware('auth')->group(function () {
     // Competitor Analysis
     Route::get('/competitors', [CompetitorController::class, 'index'])->name('competitors');
     Route::post('/competitors/run', [CompetitorController::class, 'run'])->name('competitors.run');
-
-    // Profile
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
-    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
 // ---- Admin only ----

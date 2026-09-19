@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias for our role-checking middleware.
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
+            'plan' => \App\Http\Middleware\EnsureActivePlan::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

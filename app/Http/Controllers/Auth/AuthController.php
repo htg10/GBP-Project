@@ -62,7 +62,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        return redirect()->route('plans');
     }
 
     public function login(Request $request)
@@ -78,8 +78,13 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        // Admins go to admin panel, others to dashboard.
-        return redirect()->intended(Auth::user()->isAdmin() ? route('admin.overview') : route('dashboard'));
+        $user = Auth::user();
+        if ($user->isAdmin()) {
+            return redirect()->intended(route('admin.overview'));
+        }
+        $sub = $user->agency?->subscription;
+        $dest = (! $sub || $sub->status === 'TRIALING') ? route('plans') : route('dashboard');
+        return redirect()->intended($dest);
     }
 
     public function redirectToGoogle()
@@ -102,9 +107,12 @@ class AuthController extends Controller
                 $user->update(['avatar' => $googleUser->getAvatar()]);
             }
             Auth::login($user, true);
-            return redirect()->intended(
-                $user->isAdmin() ? route('admin.overview') : route('dashboard')
-            );
+            if ($user->isAdmin()) {
+                return redirect()->intended(route('admin.overview'));
+            }
+            $sub = $user->agency?->subscription;
+            $dest = (! $sub || $sub->status === 'TRIALING') ? route('plans') : route('dashboard');
+            return redirect()->intended($dest);
         }
 
         $agency = Agency::create([
@@ -131,7 +139,7 @@ class AuthController extends Controller
         Subscription::create(['agency_id' => $agency->id, 'plan' => 'STARTER', 'status' => 'TRIALING']);
 
         Auth::login($user, true);
-        return redirect()->route('dashboard');
+        return redirect()->route('plans');
     }
 
     public function logout(Request $request)

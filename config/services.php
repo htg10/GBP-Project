@@ -13,7 +13,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL', 'http://localhost:8000') . '/google/callback'),
         // Separate API key (not OAuth) for the Places API — powers the real
         // Local Rank Checker. Optional: without it, rank checking falls back
         // to an AI-estimated result.
@@ -36,7 +36,7 @@ return [
     'meta' => [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),
-        'redirect' => env('META_REDIRECT_URI'),
+        'redirect' => env('META_REDIRECT_URI', env('APP_URL', 'http://localhost:8000') . '/meta/callback'),
         'graph_version' => env('META_GRAPH_VERSION', env('META_API_VERSION', 'v21.0')),
         'config_id' => env('META_CONFIG_ID'),
         'verify_token' => env('META_VERIFY_TOKEN'),
