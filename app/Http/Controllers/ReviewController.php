@@ -85,7 +85,7 @@ class ReviewController extends Controller
         if ($filter === 'unreplied') $query->whereNull('reply_text');
         if ($filter === 'negative') $query->where('sentiment', 'NEGATIVE');
 
-        $reviews = $query->orderByDesc('review_time')->get();
+        $reviews = $query->orderByDesc('review_time')->paginate(15)->appends($request->query());
 
         $all = Review::where('gbp_location_id', $location->id)->get();
         $stats = [
@@ -119,17 +119,23 @@ class ReviewController extends Controller
         $count = 0;
         foreach ($raw as $r) {
             $sentiment = $this->ai->analyzeSentiment($r['comment'] ?? '');
+            $data = [
+                'agency_id' => $agencyId,
+                'gbp_location_id' => $location->id,
+                'reviewer_name' => $r['name'],
+                'reviewer_photo' => $r['photo'] ?? null,
+                'star_rating' => $r['rating'],
+                'comment' => $r['comment'],
+                'sentiment' => $sentiment,
+                'review_time' => $r['time'],
+            ];
+            if (! empty($r['reply'])) {
+                $data['reply_text'] = $r['reply'];
+                $data['replied_at'] = $r['reply_time'] ?? now();
+            }
             $review = Review::updateOrCreate(
                 ['google_review_id' => $r['reviewId']],
-                [
-                    'agency_id' => $agencyId,
-                    'gbp_location_id' => $location->id,
-                    'reviewer_name' => $r['name'],
-                    'star_rating' => $r['rating'],
-                    'comment' => $r['comment'],
-                    'sentiment' => $sentiment,
-                    'review_time' => $r['time'],
-                ]
+                $data
             );
 
             // Auto-reply only to brand-new, unreplied reviews (if credits allow).

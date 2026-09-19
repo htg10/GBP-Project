@@ -2,52 +2,128 @@
 @section('title', 'Google Audit')
 @section('content')
 
-<div class="page-head">
-    <div><h1>Google Audit</h1><p>Score your Google Business Profile health and get AI-powered fixes.</p></div>
-</div>
-
-@if($clients->isEmpty())
-    <div class="card"><div class="empty">No clients yet. <a href="{{ route('clients') }}" style="color:var(--teal);">Add a client</a> first, then run an audit.</div></div>
-@else
-    {{-- Controls --}}
-    <div class="card" style="margin-bottom:16px;">
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-            <label style="flex:1;min-width:200px;">
-                <span class="lbl">Business Location</span>
-                <select id="audit-client" style="width:100%;">
-                    @foreach($clients as $c)
-                        <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->locations_count }} location{{ $c->locations_count !== 1 ? 's' : '' }})</option>
-                    @endforeach
-                </select>
-            </label>
-            <button class="btn" id="run-btn" style="height:40px;padding:0 22px;">
-                <span style="display:inline-flex;align-items:center;gap:6px;">&#9678; Analyze Profile</span>
-            </button>
-        </div>
-    </div>
-
-    {{-- Results --}}
-    <div id="audit-results"></div>
-@endif
-
 @push('head')
 <style>
-    .audit-cat{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
-    .audit-cat-item{display:flex;align-items:center;gap:12px;}
-    .audit-cat-label{font-size:13px;font-weight:600;min-width:140px;}
-    .audit-bar{flex:1;height:8px;background:#f3f1ea;border-radius:6px;overflow:hidden;}
-    .audit-bar-fill{height:100%;border-radius:6px;transition:width .5s;}
-    .audit-pct{font-size:12px;font-weight:700;min-width:36px;text-align:right;}
-    .qw-item{display:flex;gap:12px;padding:12px 0;}
-    .qw-item+.qw-item{border-top:1px solid var(--line);}
-    .qw-num{width:28px;height:28px;border-radius:8px;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center;font-weight:700;font-size:12px;flex-shrink:0;}
-    .filter-badge{display:inline-flex;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--muted);transition:all .15s;}
-    .filter-badge.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+    .au-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:14px;flex-wrap:wrap;}
+    .au-header h1{font-size:22px;font-weight:700;letter-spacing:-.02em;}
+    .au-header p{font-size:13px;color:var(--muted);margin-top:3px;}
+
+    .au-controls{display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;}
+    .au-controls label{flex:1;min-width:200px;}
+    .au-controls .btn{height:42px;padding:0 24px;flex-shrink:0;}
+
+    /* Score donut */
+    .au-score-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+    .au-donut{position:relative;width:180px;height:180px;}
+    .au-donut svg{width:100%;height:100%;transform:rotate(-90deg);}
+    .au-donut circle{fill:none;stroke-linecap:round;}
+    .au-donut .bg{stroke:var(--line);stroke-width:12;}
+    .au-donut .fg{stroke-width:12;transition:stroke-dashoffset 1s ease,stroke .3s;}
+    .au-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .au-donut-score{font-size:42px;font-weight:800;line-height:1;}
+    .au-donut-grade{font-size:13px;font-weight:700;margin-top:2px;}
+    .au-score-stats{display:flex;gap:24px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);width:100%;}
+    .au-score-stat{text-align:center;flex:1;}
+    .au-score-stat .v{font-size:20px;font-weight:800;}
+    .au-score-stat .l{font-size:11px;color:var(--muted);margin-top:1px;}
+
+    /* Category bars */
+    .au-cats{display:flex;flex-direction:column;gap:14px;}
+    .au-cat{display:flex;align-items:center;gap:12px;}
+    .au-cat-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:15px;flex-shrink:0;}
+    .au-cat-info{flex:1;min-width:0;}
+    .au-cat-label{font-size:13px;font-weight:600;margin-bottom:4px;}
+    .au-cat-bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden;}
+    .au-cat-bar-fill{height:100%;border-radius:6px;transition:width .8s ease;}
+    .au-cat-pct{font-size:13px;font-weight:700;min-width:40px;text-align:right;}
+
+    /* Check cards */
+    .au-checks{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .au-check{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:flex-start;transition:border-color .15s;}
+    .au-check:hover{border-color:#d0d5e0;}
+    .au-check-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:14px;font-weight:700;flex-shrink:0;}
+    .au-check-icon.pass{background:var(--green-soft);color:var(--green);}
+    .au-check-icon.fail{background:var(--rose-soft);color:var(--rose);}
+    .au-check-icon.warn{background:var(--amber-soft);color:var(--amber);}
+    .au-check-body{flex:1;min-width:0;}
+    .au-check-title{font-size:13.5px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:8px;}
+    .au-check-note{font-size:12.5px;color:var(--muted);line-height:1.45;}
+    .au-check-bar{height:4px;border-radius:4px;background:var(--line);margin-top:8px;overflow:hidden;}
+    .au-check-bar-fill{height:100%;border-radius:4px;}
+
+    /* Filter chips */
+    .au-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+    .au-chip{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:500;background:var(--card);color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;border:1px solid var(--line);}
+    .au-chip:hover{border-color:var(--teal);color:var(--teal);}
+    .au-chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+    /* AI tips */
+    .au-tips{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);border-left:3px solid var(--teal);}
+    .au-tips h4{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+    .au-tips-text{font-size:13.5px;line-height:1.7;color:var(--ink);}
+    .au-tips-text ul{margin:6px 0 0 4px;padding-left:16px;}
+    .au-tips-text li{margin-bottom:6px;}
+
+    /* Loading / empty */
+    .au-loading{text-align:center;padding:48px 20px;}
+    .au-loading .spin{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:sp .6s linear infinite;margin:0 auto 14px;}
+
+    .au-empty-state{text-align:center;padding:60px 20px;}
+    .au-empty-icon{width:72px;height:72px;border-radius:50%;background:var(--teal-soft);color:var(--teal);display:grid;place-items:center;font-size:30px;margin:0 auto 16px;}
+    .au-empty-state h3{font-size:17px;font-weight:700;margin-bottom:6px;}
+    .au-empty-state p{font-size:13.5px;color:var(--muted);max-width:380px;margin:0 auto;}
+
+    @keyframes sp{to{transform:rotate(360deg)}}
     @media (max-width:700px){
-        .audit-grid{grid-template-columns:1fr !important;}
+        .au-checks{grid-template-columns:1fr;}
+        .au-top-grid{grid-template-columns:1fr !important;}
+        .au-score-stats{gap:14px;}
     }
 </style>
 @endpush
+
+<div class="au-header">
+    <div>
+        <h1>Google Audit</h1>
+        <p>Score your Google Business Profile health and get AI-powered fixes.</p>
+    </div>
+</div>
+
+@if($clients->isEmpty())
+    <div class="card">
+        <div class="au-empty-state">
+            <div class="au-empty-icon">📊</div>
+            <h3>No Clients Yet</h3>
+            <p>Add a client first, then run an audit to score your Google Business Profile health.</p>
+            <a href="{{ route('clients') }}" class="btn" style="margin-top:16px;">+ Add Client</a>
+        </div>
+    </div>
+@else
+    <div class="au-controls">
+        <label>
+            <span class="lbl">Business Location</span>
+            <select id="audit-client">
+                @foreach($clients as $c)
+                    <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->locations_count }} location{{ $c->locations_count !== 1 ? 's' : '' }})</option>
+                @endforeach
+            </select>
+        </label>
+        <button class="btn" id="run-btn">📊 Analyze Profile</button>
+    </div>
+
+    {{-- Placeholder before audit runs --}}
+    <div id="audit-placeholder">
+        <div class="card">
+            <div class="au-empty-state">
+                <div class="au-empty-icon">📊</div>
+                <h3>Ready to Audit</h3>
+                <p>Select a business location above and click "Analyze Profile" to get a comprehensive health score with AI recommendations.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="audit-results" style="display:none;"></div>
+@endif
 
 @push('scripts')
 <script>
@@ -57,10 +133,14 @@ let auditData = null;
 document.getElementById('run-btn')?.addEventListener('click', async () => {
     const clientId = document.getElementById('audit-client').value;
     const box = document.getElementById('audit-results');
+    const placeholder = document.getElementById('audit-placeholder');
     const btn = document.getElementById('run-btn');
-    btn.innerHTML = '<span class="spin" style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;"></span> Analyzing&hellip;';
+
+    btn.innerHTML = '<span class="spin" style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;"></span> Analyzing…';
     btn.disabled = true;
-    box.innerHTML = '<div class="card" style="text-align:center;padding:32px;"><div class="spin" style="display:inline-block;width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:sp .6s linear infinite;margin-bottom:10px;"></div><div style="color:var(--muted);font-size:13px;">Running comprehensive audit&hellip;</div></div>';
+    placeholder.style.display = 'none';
+    box.style.display = '';
+    box.innerHTML = '<div class="card"><div class="au-loading"><div class="spin"></div><div style="font-size:14px;font-weight:600;margin-bottom:4px;">Running Comprehensive Audit</div><div style="font-size:13px;color:var(--muted);">Analyzing reviews, ratings, and profile health…</div></div></div>';
 
     try {
         const res = await fetch("{{ route('audit.run') }}", {
@@ -69,119 +149,146 @@ document.getElementById('run-btn')?.addEventListener('click', async () => {
             body: JSON.stringify({client_id: clientId})
         });
         const data = await res.json();
-        if (data.error) { box.innerHTML = '<div class="card" style="border-left:3px solid var(--rose);"><strong style="color:var(--rose);">Error:</strong> ' + esc(data.error) + '</div>'; return; }
+        if (data.error) {
+            box.innerHTML = '<div class="card" style="border-left:3px solid var(--rose);padding:18px;"><strong style="color:var(--rose);">Error:</strong> ' + esc(data.error) + '</div>';
+            return;
+        }
         auditData = data;
-        render(data, 'all');
+        renderAudit(data, 'all');
     } catch (e) {
-        box.innerHTML = '<div class="card" style="border-left:3px solid var(--rose);">Could not run audit. Try again.</div>';
+        box.innerHTML = '<div class="card" style="border-left:3px solid var(--rose);padding:18px;">Could not run audit. Please try again.</div>';
     } finally {
-        btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;">&#9678; Analyze Profile</span>'; btn.disabled = false;
+        btn.innerHTML = '📊 Analyze Profile';
+        btn.disabled = false;
     }
 });
 
 function getColor(score){
-    return score >= 85 ? 'var(--teal)' : (score >= 65 ? '#3a8a2a' : (score >= 40 ? 'var(--amber)' : 'var(--rose)'));
+    if (score >= 80) return 'var(--green)';
+    if (score >= 60) return 'var(--teal)';
+    if (score >= 40) return 'var(--amber)';
+    return 'var(--rose)';
 }
 
-function render(d, filter){
+function renderAudit(d, filter){
     const box = document.getElementById('audit-results');
     const color = getColor(d.score);
+    const circ = 2 * Math.PI * 76;
+    const offset = circ - (circ * d.score / 100);
+
+    const cats = [
+        {label:'Profile Setup', icon:'📍', bg:'var(--teal-soft)', pct: d.checks[0]?.ok ? 100 : 30},
+        {label:'Review Volume', icon:'✉', bg:'var(--green-soft)', pct: Math.min(100, d.stats.total >= 20 ? 100 : Math.round(d.stats.total / 20 * 100))},
+        {label:'Average Rating', icon:'★', bg:'var(--amber-soft)', pct: Math.min(100, Math.round((d.stats.avg || 0) / 5 * 100))},
+        {label:'Reply Rate', icon:'💬', bg:'var(--teal-soft)', pct: Math.min(100, d.stats.reply_rate || 0)},
+        {label:'Reputation', icon:'🛡', bg:'var(--green-soft)', pct: d.stats.negative === 0 ? 100 : (d.checks[4]?.ok ? 90 : 40)}
+    ];
 
     let html = '';
 
-    // Top row: score donut + business details
-    html += '<div class="audit-grid" style="display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:16px;">';
+    // Top row: Score donut + Category breakdown
+    html += '<div class="au-top-grid" style="display:grid;grid-template-columns:340px 1fr;gap:16px;margin-bottom:18px;">';
 
-    // Score card
-    html += '<div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
-        + '<div style="position:relative;width:160px;height:160px;">'
-        + '<div style="width:160px;height:160px;border-radius:50%;background:conic-gradient(' + color + ' ' + (d.score*3.6) + 'deg, #f3f1ea 0deg);display:grid;place-items:center;">'
-        + '<div style="width:126px;height:126px;border-radius:50%;background:var(--card);display:grid;place-items:center;">'
-        + '<div><div style="font-size:38px;font-weight:800;color:' + color + ';">' + d.score + '%</div>'
-        + '<div style="font-size:12px;color:' + color + ';font-weight:600;">' + esc(d.grade) + '</div></div>'
-        + '</div></div></div>'
-        + '<div style="display:flex;justify-content:center;gap:20px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);width:100%;">'
-        + '<div><div style="font-weight:700;font-size:18px;">' + d.stats.avg + '</div><div style="font-size:11px;color:var(--muted);">Avg Rating</div></div>'
-        + '<div><div style="font-weight:700;font-size:18px;">' + d.stats.reply_rate + '%</div><div style="font-size:11px;color:var(--muted);">Reply Rate</div></div>'
-        + '<div><div style="font-weight:700;font-size:18px;">' + d.stats.total + '</div><div style="font-size:11px;color:var(--muted);">Reviews</div></div>'
-        + '</div></div>';
+    // Score donut card
+    html += '<div class="card"><div class="au-score-wrap">'
+        + '<div class="au-donut">'
+        + '<svg viewBox="0 0 180 180"><circle class="bg" cx="90" cy="90" r="76"/>'
+        + '<circle class="fg" cx="90" cy="90" r="76" stroke="' + color + '" stroke-dasharray="' + circ + '" stroke-dashoffset="' + offset + '"/></svg>'
+        + '<div class="au-donut-center"><div class="au-donut-score" style="color:' + color + ';">' + d.score + '</div>'
+        + '<div class="au-donut-grade" style="color:' + color + ';">' + esc(d.grade) + '</div></div></div>'
+        + '<div class="au-score-stats">'
+        + '<div class="au-score-stat"><div class="v">' + d.stats.avg + '</div><div class="l">Avg Rating</div></div>'
+        + '<div class="au-score-stat"><div class="v">' + d.stats.reply_rate + '%</div><div class="l">Reply Rate</div></div>'
+        + '<div class="au-score-stat"><div class="v">' + d.stats.total + '</div><div class="l">Reviews</div></div>'
+        + '</div></div></div>';
 
-    // Business details + Score by category
-    html += '<div style="display:flex;flex-direction:column;gap:16px;">';
-
-    // Score by Category
-    const cats = [
-        {label:'Profile Completeness', pct: d.checks[0].ok ? 100 : 30},
-        {label:'Customer Engagement', pct: Math.min(100, Math.round((d.stats.reply_rate || 0)))},
-        {label:'Review Volume', pct: Math.min(100, d.stats.total >= 20 ? 100 : Math.round(d.stats.total / 20 * 100))},
-        {label:'Reputation Score', pct: Math.min(100, Math.round((d.stats.avg || 0) / 5 * 100))},
-        {label:'Negative Handling', pct: d.stats.negative === 0 ? 100 : (d.checks[4] && d.checks[4].ok ? 90 : 40)}
-    ];
-    html += '<div class="card"><div style="font-weight:700;font-size:15px;margin-bottom:4px;">Score by Category</div><div class="audit-cat">';
+    // Category breakdown card
+    html += '<div class="card" style="display:flex;flex-direction:column;justify-content:center;">'
+        + '<div style="font-weight:700;font-size:16px;margin-bottom:16px;">Score Breakdown</div>'
+        + '<div class="au-cats">';
     cats.forEach(c => {
-        const col = c.pct >= 80 ? 'var(--teal)' : (c.pct >= 50 ? 'var(--amber)' : 'var(--rose)');
-        html += '<div class="audit-cat-item"><span class="audit-cat-label">' + c.label + '</span>'
-            + '<div class="audit-bar"><div class="audit-bar-fill" style="width:' + c.pct + '%;background:' + col + ';"></div></div>'
-            + '<span class="audit-pct" style="color:' + col + ';">' + c.pct + '%</span></div>';
+        const col = getColor(c.pct);
+        html += '<div class="au-cat">'
+            + '<div class="au-cat-icon" style="background:' + c.bg + ';">' + c.icon + '</div>'
+            + '<div class="au-cat-info"><div class="au-cat-label">' + c.label + '</div>'
+            + '<div class="au-cat-bar"><div class="au-cat-bar-fill" style="width:' + c.pct + '%;background:' + col + ';"></div></div></div>'
+            + '<div class="au-cat-pct" style="color:' + col + ';">' + c.pct + '%</div></div>';
     });
-    html += '</div></div>';
+    html += '</div></div></div>';
 
-    html += '</div></div>';
-
-    // Filter badges
-    html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
-    ['All','Poor','Warning','Good'].forEach(f => {
-        const active = filter === f.toLowerCase() ? ' active' : '';
-        html += '<button class="filter-badge' + active + '" onclick="filterChecks(\'' + f.toLowerCase() + '\')">' + f + '</button>';
+    // Filter chips
+    html += '<div class="au-filters">';
+    ['All','Pass','Warning','Fail'].forEach(f => {
+        const key = f.toLowerCase();
+        const active = filter === key ? ' active' : '';
+        html += '<button class="au-chip' + active + '" onclick="filterChecks(\'' + key + '\')">' + f + '</button>';
     });
     html += '</div>';
 
-    // Quick Wins + AI Recommendations
-    html += '<div class="audit-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
-
-    // Quick wins
-    html += '<div class="card"><div style="font-weight:700;font-size:15px;margin-bottom:4px;">Quick Wins</div>';
-    let num = 0;
+    // Detailed check cards
+    html += '<div class="au-checks">';
+    let visible = 0;
     d.checks.forEach(c => {
-        const status = c.ok ? 'good' : (c.weight >= 20 ? 'poor' : 'warning');
+        const status = c.ok ? 'pass' : (c.weight >= 20 ? 'fail' : 'warning');
         if (filter !== 'all' && status !== filter) return;
-        num++;
-        const bg = c.ok ? 'var(--teal-soft)' : (c.weight >= 20 ? 'var(--rose-soft)' : 'var(--amber-soft)');
-        const col = c.ok ? 'var(--teal-ink)' : (c.weight >= 20 ? 'var(--rose)' : '#8a5a08');
-        const icon = c.ok ? '&#10003;' : '&#10007;';
-        const pct = c.ok ? 100 : (c.weight >= 20 ? 20 : 50);
-        html += '<div class="qw-item">'
-            + '<div class="qw-num" style="background:' + bg + ';color:' + col + ';">' + num + '</div>'
-            + '<div style="flex:1;"><div style="display:flex;justify-content:space-between;align-items:center;">'
-            + '<span style="font-weight:600;font-size:13px;">' + esc(c.label) + '</span>'
-            + '<span style="font-size:11px;font-weight:600;color:' + col + ';">' + icon + '</span></div>'
-            + '<div style="font-size:12px;color:var(--muted);margin-top:3px;">' + esc(c.note) + '</div>'
-            + '<div style="margin-top:6px;background:#f3f1ea;border-radius:4px;height:5px;overflow:hidden;">'
-            + '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:4px;"></div></div>'
+        visible++;
+
+        const iconCls = c.ok ? 'pass' : (c.weight >= 20 ? 'fail' : 'warn');
+        const icon = c.ok ? '✓' : (c.weight >= 20 ? '✕' : '!');
+        const barColor = c.ok ? 'var(--green)' : (c.weight >= 20 ? 'var(--rose)' : 'var(--amber)');
+        const barPct = c.ok ? 100 : (c.weight >= 20 ? 20 : 50);
+        const weightLabel = c.weight >= 20 ? 'High impact' : 'Medium impact';
+
+        html += '<div class="au-check">'
+            + '<div class="au-check-icon ' + iconCls + '">' + icon + '</div>'
+            + '<div class="au-check-body">'
+            + '<div class="au-check-title">' + esc(c.label)
+            + '<span class="badge ' + (c.ok ? 'teal' : (c.weight >= 20 ? 'rose' : 'amber')) + '" style="font-size:10px;padding:1px 7px;">' + weightLabel + '</span></div>'
+            + '<div class="au-check-note">' + esc(c.note) + '</div>'
+            + '<div class="au-check-bar"><div class="au-check-bar-fill" style="width:' + barPct + '%;background:' + barColor + ';"></div></div>'
             + '</div></div>';
     });
-    if (num === 0) html += '<div style="padding:16px 0;color:var(--muted);font-size:13px;text-align:center;">No items match this filter.</div>';
+    if (visible === 0) {
+        html += '<div class="card" style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);">No checks match this filter.</div>';
+    }
     html += '</div>';
 
-    // AI recommendations
-    html += '<div class="card" style="border-left:3px solid var(--teal);">'
-        + '<div style="font-weight:700;font-size:15px;margin-bottom:10px;">&#10024; AI Recommendations</div>'
-        + '<div style="font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap;">' + esc(d.ai_tips || 'No AI recommendations available.') + '</div>'
-        + '</div>';
-
-    html += '</div>';
+    // AI Recommendations
+    html += '<div class="au-tips" style="margin-top:18px;">'
+        + '<h4>✦ AI Recommendations</h4>'
+        + '<div class="au-tips-text">' + formatTips(d.ai_tips || 'No AI recommendations available.') + '</div></div>';
 
     box.innerHTML = html;
 }
 
 function filterChecks(f){
-    if (auditData) render(auditData, f);
+    if (auditData) renderAudit(auditData, f);
+}
+
+function formatTips(text){
+    let html = esc(text)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const lines = html.split('\n');
+    let result = '';
+    let inList = false;
+    for (const line of lines){
+        const trimmed = line.trim();
+        const m = trimmed.match(/^(\d+\.|[-•*])\s+(.*)/);
+        if (m){
+            if (!inList){ result += '<ul>'; inList = true; }
+            result += '<li>' + m[2] + '</li>';
+        } else {
+            if (inList){ result += '</ul>'; inList = false; }
+            if (trimmed) result += '<p style="margin:0 0 6px;">' + trimmed + '</p>';
+        }
+    }
+    if (inList) result += '</ul>';
+    return result;
 }
 
 function esc(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 </script>
-<style>@keyframes sp{to{transform:rotate(360deg)}}</style>
 @endpush
 @endsection

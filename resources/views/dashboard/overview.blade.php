@@ -23,8 +23,8 @@
     </div>
     <div class="rf-hero-actions">
         @if($hasGoogle)
-            <form method="POST" action="{{ route('dashboard.sync') }}" style="display:inline;">@csrf
-                <button type="submit" class="rf-hero-btn primary">⟳ Sync Live Data</button>
+            <form method="POST" action="{{ route('dashboard.sync') }}" style="display:inline;" id="sync-form">@csrf
+                <button type="submit" class="rf-hero-btn primary" id="sync-btn">⟳ Sync Live Data</button>
             </form>
         @elseif(!auth()->user()->email_verified_at)
             <span class="rf-hero-btn" style="opacity:.7;cursor:default;" title="Verify your email first">✉ Verify Email to Connect</span>
@@ -241,6 +241,14 @@
     </div>
 </div>
 
+<div class="sync-overlay" id="sync-overlay">
+    <div class="sync-box">
+        <div class="sync-spinner"></div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Syncing Live Data</div>
+        <div style="font-size:13px;color:var(--muted);">Pulling reviews from Google Business Profile...</div>
+    </div>
+</div>
+
 @push('head')
 <style>
     .main{max-width:1180px;}
@@ -251,6 +259,11 @@
     .rf-hero-actions{display:flex;gap:8px;flex-wrap:wrap;}
     .rf-hero-btn{padding:9px 16px;border-radius:10px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:13px;font-weight:600;backdrop-filter:blur(6px);}
     .rf-hero-btn.primary{background:#fff;color:#3452d1;border-color:#fff;}
+    .sync-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;justify-content:center;align-items:center;}
+    .sync-overlay.active{display:flex;}
+    .sync-box{background:var(--card);border-radius:18px;padding:32px 40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+    .sync-spinner{width:48px;height:48px;border:4px solid var(--line);border-top:4px solid #4c6fff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
     .rf-tabs{display:flex;gap:4px;margin-bottom:18px;overflow-x:auto;padding-bottom:2px;border-bottom:1px solid var(--line);}
     .rf-tab{padding:9px 14px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;}
     .rf-tab:hover{color:var(--ink);}
@@ -395,6 +408,11 @@ new Chart(document.getElementById('chartBreakdown'), {
             y:{stacked:true,grid:{color:gridClr},ticks:{font:{size:11}},beginAtZero:true}
         }
     }
+});
+
+document.getElementById('sync-form')?.addEventListener('submit', function(){
+    document.getElementById('sync-btn').disabled = true;
+    document.getElementById('sync-overlay').classList.add('active');
 });
 </script>
 @endpush

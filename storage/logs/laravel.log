@@ -2640,3 +2640,81 @@ Content-Transfer-Encoding: quoted-printable
 #64 D:/reviewflow-laravel/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('D://reviewflow-l...')
 #65 {main}
 "} 
+[2026-09-19 14:08:07] local.WARNING: GBP fetchPerformanceMetrics failed: 400 {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"dailyMetrics[2]\": Cannot bind query parameter. Field 'dailyMetrics[2]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[7]\": Cannot bind query parameter. Field 'dailyMetrics[7]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[3]\": Cannot bind query parameter. Field 'dailyMetrics[3]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[6]\": Cannot bind query parameter. Field 'dailyMetrics[6]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[1]\": Cannot bind query parameter. Field 'dailyMetrics[1]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[0]\": Cannot bind query parameter. Field 'dailyMetrics[0]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[4]\": Cannot bind query parameter. Field 'dailyMetrics[4]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[5]\": Cannot bind query parameter. Field 'dailyMetrics[5]' could not be found in request message.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[2]\": Cannot bind query parameter. Field 'dailyMetrics[2]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[7]\": Cannot bind query parameter. Field 'dailyMetrics[7]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[3]\": Cannot bind query parameter. Field 'dailyMetrics[3]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[6]\": Cannot bind query parameter. Field 'dailyMetrics[6]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[1]\": Cannot bind query parameter. Field 'dailyMetrics[1]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[0]\": Cannot bind query parameter. Field 'dailyMetrics[0]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[4]\": Cannot bind query parameter. Field 'dailyMetrics[4]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[5]\": Cannot bind query parameter. Field 'dailyMetrics[5]' could not be found in request message."
+          }
+        ]
+      }
+    ]
+  }
+}
+  
+[2026-09-19 14:11:28] local.WARNING: GBP fetchPerformanceMetrics failed: 400 {
+  "error": {
+    "code": 400,
+    "message": "Invalid JSON payload received. Unknown name \"dailyMetrics[7]\": Cannot bind query parameter. Field 'dailyMetrics[7]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[3]\": Cannot bind query parameter. Field 'dailyMetrics[3]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[1]\": Cannot bind query parameter. Field 'dailyMetrics[1]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[0]\": Cannot bind query parameter. Field 'dailyMetrics[0]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[2]\": Cannot bind query parameter. Field 'dailyMetrics[2]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[4]\": Cannot bind query parameter. Field 'dailyMetrics[4]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[5]\": Cannot bind query parameter. Field 'dailyMetrics[5]' could not be found in request message.\nInvalid JSON payload received. Unknown name \"dailyMetrics[6]\": Cannot bind query parameter. Field 'dailyMetrics[6]' could not be found in request message.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[7]\": Cannot bind query parameter. Field 'dailyMetrics[7]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[3]\": Cannot bind query parameter. Field 'dailyMetrics[3]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[1]\": Cannot bind query parameter. Field 'dailyMetrics[1]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[0]\": Cannot bind query parameter. Field 'dailyMetrics[0]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[2]\": Cannot bind query parameter. Field 'dailyMetrics[2]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[4]\": Cannot bind query parameter. Field 'dailyMetrics[4]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[5]\": Cannot bind query parameter. Field 'dailyMetrics[5]' could not be found in request message."
+          },
+          {
+            "description": "Invalid JSON payload received. Unknown name \"dailyMetrics[6]\": Cannot bind query parameter. Field 'dailyMetrics[6]' could not be found in request message."
+          }
+        ]
+      }
+    ]
+  }
+}
+  

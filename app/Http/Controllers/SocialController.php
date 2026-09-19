@@ -41,6 +41,7 @@ class SocialController extends Controller
             'platform' => 'required|in:FACEBOOK,INSTAGRAM,LINKEDIN,X',
             'body' => 'required|string',
             'media_url' => 'nullable|url',
+            'media_file' => 'nullable|image|max:10240',
             'scheduled_at' => 'nullable|date',
         ]);
 
@@ -50,12 +51,20 @@ class SocialController extends Controller
         }
         $client = Client::where('agency_id', $agencyId)->findOrFail($data['client_id']);
 
+        $mediaUrls = null;
+        if ($request->hasFile('media_file')) {
+            $f = $request->file('media_file');
+            $mediaUrls = ['data:'.$f->getMimeType().';base64,'.base64_encode(file_get_contents($f->getRealPath()))];
+        } elseif (!empty($data['media_url'])) {
+            $mediaUrls = [$data['media_url']];
+        }
+
         $post = SocialPost::create([
             'agency_id' => $agencyId,
             'client_id' => $client->id,
             'platform' => $data['platform'],
             'body' => $data['body'],
-            'media_urls' => $data['media_url'] ?? null ? [$data['media_url']] : null,
+            'media_urls' => $mediaUrls,
             'status' => $request->filled('scheduled_at') ? 'SCHEDULED' : 'DRAFT',
             'scheduled_at' => $data['scheduled_at'] ?? null,
         ]);

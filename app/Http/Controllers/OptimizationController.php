@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\GbpLocation;
+use App\Models\GbpPhoto;
+use App\Models\GbpPost;
+use App\Models\Lead;
 use App\Models\Review;
 use App\Models\SocialPost;
 use App\Services\AiService;
@@ -22,10 +26,50 @@ class OptimizationController extends Controller
     public function index(Request $request)
     {
         $agencyId = $request->user()->agency_id;
+        $clientId = $request->user()->client_id;
+
         $pending = Review::where('agency_id', $agencyId)->whereNull('reply_text')->count();
         $total = Review::where('agency_id', $agencyId)->count();
+        $negative = Review::where('agency_id', $agencyId)->where('sentiment', 'NEGATIVE')->count();
 
-        return view('dashboard.optimize', compact('pending', 'total'));
+        $locQ = GbpLocation::whereHas('client', fn ($q) => $q->where('agency_id', $agencyId));
+        if ($clientId) $locQ->whereHas('client', fn ($q) => $q->where('id', $clientId));
+        $locationCount = $locQ->count();
+
+        $postTotal = GbpPost::whereHas('location.client', fn ($q) => $q->where('agency_id', $agencyId))->count();
+        $postPublished = GbpPost::whereHas('location.client', fn ($q) => $q->where('agency_id', $agencyId))->where('status', 'PUBLISHED')->count();
+        $photoCount = GbpPhoto::whereHas('location.client', fn ($q) => $q->where('agency_id', $agencyId))->count();
+        $socialDrafts = SocialPost::where('agency_id', $agencyId)->where('status', 'DRAFT')->count();
+        $socialTotal = SocialPost::where('agency_id', $agencyId)->count();
+        $leadsNew = Lead::where('agency_id', $agencyId)->whereIn('stage', ['NEW', 'CONTACTED'])->count();
+        $leadsTotal = Lead::where('agency_id', $agencyId)->count();
+
+        $categories = [
+            ['key' => 'reviews', 'icon' => '★', 'label' => 'Review Management', 'color' => 'amber',
+             'score' => $total ? round(($total - $pending) / $total * 100) : 100,
+             'stats' => ['Total reviews' => $total, 'Pending replies' => $pending, 'Negative reviews' => $negative],
+             'tip' => 'Reply to all reviews within 24 hours to boost your Google ranking.'],
+            ['key' => 'posts', 'icon' => '📝', 'label' => 'Google Posts', 'color' => 'blue',
+             'score' => $postTotal ? round($postPublished / $postTotal * 100) : 0,
+             'stats' => ['Total posts' => $postTotal, 'Published' => $postPublished, 'Locations' => $locationCount],
+             'tip' => 'Post weekly updates to keep your business profile fresh and visible.'],
+            ['key' => 'photos', 'icon' => '📷', 'label' => 'Business Photos', 'color' => 'green',
+             'score' => min(100, $photoCount * 10),
+             'stats' => ['Photos uploaded' => $photoCount, 'Locations' => $locationCount],
+             'tip' => 'Businesses with 10+ photos get 35% more clicks than those without.'],
+            ['key' => 'social', 'icon' => '💬', 'label' => 'Social Media', 'color' => 'purple',
+             'score' => $socialTotal ? round(max(0, $socialTotal - $socialDrafts) / max(1, $socialTotal) * 100) : 0,
+             'stats' => ['Total posts' => $socialTotal, 'Drafts' => $socialDrafts],
+             'tip' => 'Consistent social posting builds trust and drives local engagement.'],
+            ['key' => 'leads', 'icon' => '🎯', 'label' => 'Lead Follow-up', 'color' => 'rose',
+             'score' => $leadsTotal ? round(max(0, $leadsTotal - $leadsNew) / max(1, $leadsTotal) * 100) : 100,
+             'stats' => ['Total leads' => $leadsTotal, 'Needs follow-up' => $leadsNew],
+             'tip' => 'Respond to new leads within 5 minutes for the best conversion rate.'],
+        ];
+
+        $overallScore = count($categories) ? round(collect($categories)->avg('score')) : 0;
+
+        return view('dashboard.optimize', compact('pending', 'total', 'categories', 'overallScore'));
     }
 
     public function run(Request $request)

@@ -180,17 +180,23 @@ class DashboardController extends Controller
         foreach ($locations as $loc) {
             $raw = $gbp->listReviews($loc->client, $loc->google_name);
             foreach ($raw as $r) {
+                $data = [
+                    'agency_id' => $aid,
+                    'gbp_location_id' => $loc->id,
+                    'reviewer_name' => $r['name'],
+                    'reviewer_photo' => $r['photo'] ?? null,
+                    'star_rating' => $r['rating'],
+                    'comment' => $r['comment'],
+                    'sentiment' => $ai->analyzeSentiment($r['comment'] ?? ''),
+                    'review_time' => $r['time'],
+                ];
+                if (! empty($r['reply'])) {
+                    $data['reply_text'] = $r['reply'];
+                    $data['replied_at'] = $r['reply_time'] ?? now();
+                }
                 Review::updateOrCreate(
                     ['google_review_id' => $r['reviewId']],
-                    [
-                        'agency_id' => $aid,
-                        'gbp_location_id' => $loc->id,
-                        'reviewer_name' => $r['name'],
-                        'star_rating' => $r['rating'],
-                        'comment' => $r['comment'],
-                        'sentiment' => $ai->analyzeSentiment($r['comment'] ?? ''),
-                        'review_time' => $r['time'],
-                    ]
+                    $data
                 );
                 $count++;
             }

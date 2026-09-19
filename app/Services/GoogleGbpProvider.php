@@ -196,9 +196,12 @@ class GoogleGbpProvider
             $out[] = [
                 'reviewId' => $r['reviewId'] ?? ($r['name'] ?? uniqid()),
                 'name' => $r['reviewer']['displayName'] ?? 'Anonymous',
+                'photo' => $r['reviewer']['profilePhotoUrl'] ?? null,
                 'rating' => $starMap[$r['starRating'] ?? 'THREE'] ?? 3,
                 'comment' => $r['comment'] ?? '',
                 'time' => isset($r['createTime']) ? date('Y-m-d H:i:s', strtotime($r['createTime'])) : now()->toDateTimeString(),
+                'reply' => $r['reviewReply']['comment'] ?? null,
+                'reply_time' => isset($r['reviewReply']['updateTime']) ? date('Y-m-d H:i:s', strtotime($r['reviewReply']['updateTime'])) : null,
             ];
         }
         return $out;
@@ -271,16 +274,20 @@ class GoogleGbpProvider
             'BUSINESS_BOOKINGS',
         ];
 
+        // Google expects repeated `dailyMetrics=X` params, not PHP's `dailyMetrics[0]=X` bracket syntax.
+        $queryParts = [];
+        foreach ($dailyMetrics as $m) {
+            $queryParts[] = 'dailyMetrics=' . urlencode($m);
+        }
+        $queryParts[] = 'dailyRange.startDate.year=' . (int) substr($startDate, 0, 4);
+        $queryParts[] = 'dailyRange.startDate.month=' . (int) substr($startDate, 5, 2);
+        $queryParts[] = 'dailyRange.startDate.day=' . (int) substr($startDate, 8, 2);
+        $queryParts[] = 'dailyRange.endDate.year=' . (int) substr($endDate, 0, 4);
+        $queryParts[] = 'dailyRange.endDate.month=' . (int) substr($endDate, 5, 2);
+        $queryParts[] = 'dailyRange.endDate.day=' . (int) substr($endDate, 8, 2);
+
         try {
-            $res = $this->client($integration)->get($url, [
-                'dailyMetrics' => $dailyMetrics,
-                'dailyRange.startDate.year' => (int) substr($startDate, 0, 4),
-                'dailyRange.startDate.month' => (int) substr($startDate, 5, 2),
-                'dailyRange.startDate.day' => (int) substr($startDate, 8, 2),
-                'dailyRange.endDate.year' => (int) substr($endDate, 0, 4),
-                'dailyRange.endDate.month' => (int) substr($endDate, 5, 2),
-                'dailyRange.endDate.day' => (int) substr($endDate, 8, 2),
-            ]);
+            $res = $this->client($integration)->get($url . '?' . implode('&', $queryParts));
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             Log::warning("GBP fetchPerformanceMetrics timed out: ".$e->getMessage());
             $this->lastError = 'Google took too long to respond.';

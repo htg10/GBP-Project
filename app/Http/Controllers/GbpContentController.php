@@ -158,16 +158,28 @@ class GbpContentController extends Controller
 
         $data = $request->validate([
             'gbp_location_id' => 'required|exists:gbp_locations,id',
-            'image' => 'required|url',
+            'image_file' => 'nullable|image|max:10240',
+            'image' => 'nullable|url',
             'caption' => 'nullable|string|max:500',
+            'category' => 'nullable|string|in:COVER,LOGO,EXTERIOR,INTERIOR,PRODUCT,AT_WORK,FOOD_AND_DRINK,TEAM,ADDITIONAL',
             'scheduled_at' => 'nullable|date',
         ]);
 
+        if (empty($data['image']) && !$request->hasFile('image_file')) {
+            return back()->withErrors(['image' => 'Please upload an image or provide an image URL.']);
+        }
+
         $location = $this->locationFor($agencyId, $data['gbp_location_id']);
+
+        $imageData = $data['image'] ?? null;
+        if ($request->hasFile('image_file')) {
+            $f = $request->file('image_file');
+            $imageData = 'data:'.$f->getMimeType().';base64,'.base64_encode(file_get_contents($f->getRealPath()));
+        }
 
         $photo = GbpPhoto::create([
             'gbp_location_id' => $location->id,
-            'image' => $data['image'],
+            'image' => $imageData,
             'caption' => $data['caption'] ?? null,
             'status' => $request->filled('scheduled_at') ? 'SCHEDULED' : 'DRAFT',
             'scheduled_at' => $data['scheduled_at'] ?? null,

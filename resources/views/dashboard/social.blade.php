@@ -25,7 +25,7 @@
             <div><div style="font-weight:700;">Create Post</div><div style="font-size:12px;color:var(--muted);">Write once, publish everywhere</div></div>
         </div>
 
-        <form method="POST" action="{{ route('social.store') }}">
+        <form method="POST" action="{{ route('social.store') }}" enctype="multipart/form-data">
             @csrf
             <label><span class="lbl">Client</span>
                 <select name="client_id" required>
@@ -49,7 +49,30 @@
             </label>
             <button type="button" onclick="genCaption(this)" style="background:none;border:none;color:var(--teal);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:6px;">✨ Write with AI</button>
 
-            <label style="margin-top:10px;"><span class="lbl">Image URL (optional)</span><input type="url" name="media_url" id="soc-media" placeholder="https://... (public image)" oninput="updatePreview()"></label>
+            <div style="margin-top:10px;">
+                <span class="lbl">Image (optional)</span>
+                <div class="soc-img-tabs">
+                    <button type="button" class="soc-img-tab active" onclick="switchImgMode('upload',this)">📷 Upload</button>
+                    <button type="button" class="soc-img-tab" onclick="switchImgMode('url',this)">🔗 URL</button>
+                </div>
+                <div id="soc-upload-mode">
+                    <div class="soc-dropzone" id="soc-dropzone" onclick="document.getElementById('soc-file-input').click()">
+                        <div style="font-size:22px;color:var(--muted);">📷</div>
+                        <div style="font-size:13px;color:var(--muted);margin-top:6px;">Click to upload or drag & drop</div>
+                        <div style="font-size:11px;color:var(--muted);">PNG, JPG, WebP up to 10MB</div>
+                    </div>
+                    <input type="file" id="soc-file-input" name="media_file" accept="image/*" style="display:none;" onchange="handleSocFile(this)">
+                    <div id="soc-file-preview" style="display:none;margin-top:8px;">
+                        <div style="position:relative;border-radius:10px;overflow:hidden;">
+                            <img id="soc-file-preview-img" src="" style="width:100%;max-height:160px;object-fit:cover;display:block;">
+                            <button type="button" onclick="clearSocFile()" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:14px;">&times;</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="soc-url-mode" style="display:none;">
+                    <input type="url" name="media_url" id="soc-media" placeholder="https://... (public image)" oninput="updatePreview()">
+                </div>
+            </div>
             <label style="margin-top:10px;"><span class="lbl">Schedule (leave blank to publish now)</span><input type="datetime-local" name="scheduled_at"></label>
 
             <button type="submit" class="btn" style="width:100%;justify-content:center;margin-top:16px;padding:12px;">🚀 Publish Post</button>
@@ -116,6 +139,12 @@
     .sp-img img{width:100%;max-height:260px;object-fit:cover;display:block;}
     .sp-actions{display:flex;justify-content:space-around;padding:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
     .soc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+    .soc-img-tabs{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:10px;}
+    .soc-img-tab{flex:1;padding:7px 10px;font-size:12px;font-weight:600;background:var(--card);color:var(--muted);border:none;cursor:pointer;transition:all .15s;font-family:inherit;}
+    .soc-img-tab:not(:first-child){border-left:1px solid var(--line);}
+    .soc-img-tab.active{background:var(--ink);color:#fff;}
+    .soc-dropzone{border:2px dashed var(--line);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .15s;}
+    .soc-dropzone:hover,.soc-dropzone.dragover{border-color:var(--teal);background:var(--teal-soft);}
     @media (max-width:820px){ .social-wrap{grid-template-columns:1fr;} .preview-card{position:static;} .plat-picker{grid-template-columns:repeat(2,1fr);} }
 </style>
 @endpush
@@ -146,6 +175,53 @@ async function genCaption(btn){
         body.value = data.body; updatePreview();
     }catch(e){ alert('Could not generate.'); }
     finally{ btn.textContent='✨ Write with AI'; btn.disabled=false; }
+}
+
+function switchImgMode(mode, btn){
+    document.querySelectorAll('.soc-img-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('soc-upload-mode').style.display = mode === 'upload' ? '' : 'none';
+    document.getElementById('soc-url-mode').style.display = mode === 'url' ? '' : 'none';
+    if(mode === 'upload'){ document.getElementById('soc-media').value = ''; updatePreview(); }
+    else { clearSocFile(); }
+}
+
+function handleSocFile(input){
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum size is 10MB.'); input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('soc-file-preview-img').src = e.target.result;
+        document.getElementById('soc-file-preview').style.display = '';
+        document.getElementById('soc-dropzone').style.display = 'none';
+        const imgWrap = document.getElementById('pv-img');
+        document.getElementById('pv-img-src').src = e.target.result;
+        imgWrap.style.display = '';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearSocFile(){
+    const input = document.getElementById('soc-file-input');
+    if(input) input.value = '';
+    document.getElementById('soc-file-preview').style.display = 'none';
+    document.getElementById('soc-dropzone').style.display = '';
+    document.getElementById('pv-img').style.display = 'none';
+}
+
+const socDrop = document.getElementById('soc-dropzone');
+if(socDrop){
+    ['dragenter','dragover'].forEach(ev => socDrop.addEventListener(ev, e => { e.preventDefault(); socDrop.classList.add('dragover'); }));
+    ['dragleave','drop'].forEach(ev => socDrop.addEventListener(ev, e => { e.preventDefault(); socDrop.classList.remove('dragover'); }));
+    socDrop.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if(files.length && files[0].type.startsWith('image/')){
+            const input = document.getElementById('soc-file-input');
+            input.files = files;
+            handleSocFile(input);
+        }
+    });
 }
 </script>
 @endpush
