@@ -45,9 +45,14 @@
         </div>
     @else
         <div class="rv-reply-form">
+            @if($review->draft_reply)
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11.5px;font-weight:600;color:var(--amber);">
+                    <span>✦</span> AI Draft Ready — review and post
+                </div>
+            @endif
             <form method="POST" action="{{ route('reviews.reply', $review) }}" id="reply-form-{{ $review->id }}">
                 @csrf
-                <textarea name="reply_text" id="reply-{{ $review->id }}" rows="3" placeholder="Write a reply to {{ $review->reviewer_name }}…"></textarea>
+                <textarea name="reply_text" id="reply-{{ $review->id }}" rows="3" placeholder="Write a reply to {{ $review->reviewer_name }}…">{{ $review->draft_reply }}</textarea>
                 <div class="rv-form-actions">
                     <button type="button" class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px;" onclick="genReply({{ $review->id }}, this)">✦ AI Draft</button>
                     <button type="submit" class="btn" style="padding:8px 16px;font-size:12.5px;">Post Reply</button>

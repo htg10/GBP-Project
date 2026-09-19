@@ -9,7 +9,7 @@ class Review extends Model
 {
     protected $fillable = [
         'agency_id', 'gbp_location_id', 'google_review_id', 'reviewer_name', 'reviewer_photo',
-        'star_rating', 'comment', 'sentiment', 'reply_text', 'replied_at', 'replied_by', 'review_time',
+        'star_rating', 'comment', 'sentiment', 'reply_text', 'draft_reply', 'replied_at', 'replied_by', 'review_time',
     ];
     protected $casts = ['replied_at' => 'datetime', 'review_time' => 'datetime'];
 

@@ -132,6 +132,9 @@ class ReviewController extends Controller
             if (! empty($r['reply'])) {
                 $data['reply_text'] = $r['reply'];
                 $data['replied_at'] = $r['reply_time'] ?? now();
+            } else {
+                $data['reply_text'] = null;
+                $data['replied_at'] = null;
             }
             $review = Review::updateOrCreate(
                 ['google_review_id' => $r['reviewId']],
@@ -177,6 +180,7 @@ class ReviewController extends Controller
 
         $review->update([
             'reply_text' => $data['reply_text'],
+            'draft_reply' => null,
             'replied_at' => now(),
             'replied_by' => $request->user()->id,
         ]);

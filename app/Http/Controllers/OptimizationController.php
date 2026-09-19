@@ -83,20 +83,16 @@ class OptimizationController extends Controller
         $this->creditService->deduct($agencyId, $request->user()->id, 'ai_optimize', 'One-click optimize batch');
         $actions = [];
 
-        // 1. Draft AI replies for all unreplied reviews.
-        $unreplied = Review::where('agency_id', $agencyId)->whereNull('reply_text')->get();
-        $replied = 0;
+        // 1. Generate AI draft replies (NOT auto-posted — user reviews and posts manually).
+        $unreplied = Review::where('agency_id', $agencyId)->whereNull('reply_text')->whereNull('draft_reply')->get();
+        $drafted = 0;
         foreach ($unreplied as $review) {
             $reply = $this->ai->generateReviewReply($review->reviewer_name, $review->comment ?? '', $review->star_rating);
-            $review->update([
-                'reply_text' => $reply,
-                'replied_at' => now(),
-                'replied_by' => $request->user()->id,
-            ]);
-            $replied++;
+            $review->update(['draft_reply' => $reply]);
+            $drafted++;
         }
-        if ($replied > 0) {
-            $actions[] = ['icon' => '★', 'title' => "Replied to {$replied} review(s)", 'detail' => 'AI drafted and posted replies to reviews that were awaiting a response.'];
+        if ($drafted > 0) {
+            $actions[] = ['icon' => '★', 'title' => "Drafted {$drafted} review reply(s)", 'detail' => 'AI generated draft replies — go to Reviews to review and post them to Google.'];
         } else {
             $actions[] = ['icon' => '★', 'title' => 'All reviews already replied', 'detail' => 'No pending reviews found — you are all caught up.'];
         }
