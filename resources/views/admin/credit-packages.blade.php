@@ -1,42 +1,65 @@
 @extends('layouts.admin')
 @section('title', 'Credit Packages')
 @section('content')
-<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
-    <div class="page-head" style="margin:0;"><h1>Credit Packages</h1><p>Create credit packs clients can buy. Pause any pack to hide it from the store.</p></div>
-    <button class="btn" onclick="openCreate()">+ New package</button>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px;">
+    <div><h1 style="font-size:22px;font-weight:800;">Credit Packs</h1><p style="font-size:13px;color:var(--muted);margin-top:3px;">Create credit packs clients can buy. Pause any pack to hide it.</p></div>
+    <button class="btn" onclick="openCreate()" style="gap:6px;">
+        <span style="width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:14px;">+</span> New package
+    </button>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <table>
-        <thead><tr><th>Package</th><th>Credits</th><th>Price (incl. GST)</th><th>GST</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
-        <tbody>
-            @forelse($packages as $p)
-                <tr>
-                    <td><strong>{{ $p->name }}</strong></td>
-                    <td style="font-weight:700;">{{ number_format($p->credits) }}</td>
-                    <td>₹{{ number_format($p->price) }}</td>
-                    <td style="font-size:12.5px;color:var(--muted);">{{ $p->gst_rate }}% = ₹{{ number_format($p->gstAmount(),2) }}</td>
-                    <td><span class="badge {{ $p->is_active ? 'teal' : 'dark' }}">{{ $p->is_active ? 'Active' : 'Paused' }}</span></td>
-                    <td style="text-align:right;white-space:nowrap;">
-                        <form method="POST" action="{{ route('admin.credit-packages.toggle', $p) }}" style="display:inline;">@csrf
-                            <button class="icon-btn" title="{{ $p->is_active ? 'Pause' : 'Activate' }}">{{ $p->is_active ? '⏸' : '▶' }}</button>
-                        </form>
-                        <button class="icon-btn" onclick='openEdit(@json($p))'>✎</button>
-                        <form method="POST" action="{{ route('admin.credit-packages.destroy', $p) }}" style="display:inline;" onsubmit="return confirm('Delete this package?')">
-                            @csrf @method('DELETE')<button class="icon-btn" style="color:var(--rose);">🗑</button>
-                        </form>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px;">No packages yet.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
+<div class="cp-grid">
+    @forelse($packages as $p)
+        <div class="card cp-card {{ $p->is_active ? '' : 'cp-paused' }}">
+            <div style="display:flex;align-items:flex-start;gap:14px;">
+                <div class="cp-icon">⚡</div>
+                <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <strong style="font-size:15px;">{{ $p->name }}</strong>
+                        <span class="badge {{ $p->is_active ? 'teal' : 'dark' }}" style="font-size:10.5px;">{{ $p->is_active ? 'Active' : 'Paused' }}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--muted);margin-top:2px;">Sort: {{ $p->sort ?? 0 }}</div>
+                </div>
+            </div>
+
+            <div class="cp-stats">
+                <div class="cp-stat">
+                    <div class="cp-stat-val" style="color:var(--purple);">{{ number_format($p->credits) }}</div>
+                    <div class="cp-stat-label">Credits</div>
+                </div>
+                <div class="cp-stat">
+                    <div class="cp-stat-val" style="color:var(--teal);">₹{{ number_format($p->price) }}</div>
+                    <div class="cp-stat-label">Price (incl. GST)</div>
+                </div>
+                <div class="cp-stat">
+                    <div class="cp-stat-val">₹{{ number_format($p->gstAmount(),2) }}</div>
+                    <div class="cp-stat-label">GST ({{ $p->gst_rate }}%)</div>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line);">
+                <form method="POST" action="{{ route('admin.credit-packages.toggle', $p) }}" style="flex:1;">@csrf
+                    <button class="btn btn-ghost au-act-btn" style="width:100%;">{{ $p->is_active ? '⏸ Pause' : '▶ Activate' }}</button>
+                </form>
+                <button class="btn btn-ghost au-act-btn" onclick='openEdit(@json($p))' style="flex:1;">✎ Edit</button>
+                <form method="POST" action="{{ route('admin.credit-packages.destroy', $p) }}" style="flex:1;" onsubmit="return confirm('Delete {{ addslashes($p->name) }}?')">
+                    @csrf @method('DELETE')
+                    <button class="btn au-act-btn au-del-btn" style="width:100%;">🗑</button>
+                </form>
+            </div>
+        </div>
+    @empty
+        <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">
+            <div style="font-size:36px;margin-bottom:10px;">⚡</div>
+            No credit packages yet. Create your first one.
+        </div>
+    @endforelse
 </div>
 
+{{-- Modal --}}
 <div class="modal-bg" id="pkg-modal">
-    <div class="modal">
-        <h2 id="pm-title" style="font-size:18px;margin-bottom:14px;">New package</h2>
+    <div class="modal" style="max-width:440px;">
+        <h2 id="pm-title" style="font-size:18px;font-weight:700;margin-bottom:16px;">New package</h2>
         <form method="POST" id="pkg-form" action="{{ route('admin.credit-packages.store') }}">
             @csrf
             <label><span class="lbl">Package name</span><input type="text" name="name" id="f-name" placeholder="e.g. Booster Pack" required></label>
@@ -58,6 +81,23 @@
     </div>
 </div>
 
+@push('head')
+<style>
+.cp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.cp-card{padding:18px;display:flex;flex-direction:column;gap:14px;transition:box-shadow .15s,border-color .15s;}
+.cp-card:hover{border-color:#d3d9e8;box-shadow:0 2px 12px rgba(20,30,60,.08);}
+.cp-card.cp-paused{opacity:.6;border-style:dashed;}
+.cp-icon{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#a78bfa);color:#fff;display:grid;place-items:center;font-size:18px;flex-shrink:0;}
+.cp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 0;border-top:1px solid var(--line);}
+.cp-stat{text-align:center;}
+.cp-stat-val{font-size:16px;font-weight:700;}
+.cp-stat-label{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.au-act-btn{padding:6px 12px !important;font-size:12px !important;}
+.au-del-btn{background:var(--rose-soft) !important;color:var(--rose) !important;border:1px solid #f8c4c9 !important;}
+.au-del-btn:hover{background:#fde0e3 !important;}
+@media(max-width:640px){.cp-grid{grid-template-columns:1fr;}}
+</style>
+@endpush
 @push('scripts')
 <script>
 const pform = document.getElementById('pkg-form');

@@ -16,27 +16,7 @@ class AiMediaController extends Controller
 
     public function index(Request $request)
     {
-        $agencyId = $request->user()->agency_id;
-        $clientId = $request->user()->client_id; // client-scoped user
-
-        $media = AiMedia::where('agency_id', $agencyId)
-            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
-            ->with('client')->latest()->get();
-
-        // A client-bound user has exactly one client — no picker needed.
-        $clients = Client::where('agency_id', $agencyId)
-            ->when($clientId, fn ($q) => $q->where('id', $clientId))
-            ->get();
-
-        $locations = GbpLocation::whereHas('client', function ($q) use ($agencyId, $clientId) {
-                $q->where('agency_id', $agencyId);
-                if ($clientId) $q->where('id', $clientId);
-            })
-            ->with('client')->orderBy('title')->get();
-
-        $isClientScoped = (bool) $clientId;
-
-        return view('dashboard.ai-media', compact('media', 'clients', 'locations', 'isClientScoped'));
+        return redirect()->route('gbp-content');
     }
 
     public function generate(Request $request)

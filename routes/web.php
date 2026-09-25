@@ -92,8 +92,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/billing/invoice/{payment}', [\App\Http\Controllers\ClientBillingController::class, 'invoice'])->name('client-billing.invoice');
 });
 
-// ---- Authenticated + active plan required ----
-Route::middleware(['auth', 'plan'])->group(function () {
+// ---- Authenticated — core features (no plan required) ----
+Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/sync', [DashboardController::class, 'syncAll'])->name('dashboard.sync');
 
@@ -102,12 +102,6 @@ Route::middleware(['auth', 'plan'])->group(function () {
     Route::post('/team', [\App\Http\Controllers\TeamController::class, 'store'])->name('team.store');
     Route::post('/team/{user}', [\App\Http\Controllers\TeamController::class, 'update'])->name('team.update');
     Route::delete('/team/{user}', [\App\Http\Controllers\TeamController::class, 'destroy'])->name('team.destroy');
-
-    // Buy credits
-    Route::get('/buy-credits', [BillingController::class, 'buyCredits'])->name('buy-credits');
-    Route::post('/buy-credits/instant', [BillingController::class, 'creditBuyInstant'])->name('buy-credits.instant');
-    Route::post('/buy-credits/checkout', [BillingController::class, 'creditCheckout'])->name('buy-credits.checkout');
-    Route::post('/buy-credits/verify', [BillingController::class, 'creditVerify'])->name('buy-credits.verify');
 
     // Clients
     Route::get('/clients', [ClientController::class, 'index'])->name('clients');
@@ -123,23 +117,24 @@ Route::middleware(['auth', 'plan'])->group(function () {
     Route::delete('/clients/{client}/google/disconnect', [GoogleOAuthController::class, 'disconnect'])->name('google.disconnect');
     Route::post('/clients/{client}/google/import-locations', [ClientController::class, 'importLocations'])->name('clients.import-locations');
 
-    // Reviews (GBP)
+    // Meta connect (OAuth)
+    Route::get('/clients/{client}/meta/connect', [MetaOAuthController::class, 'connect'])->name('meta.connect');
+    Route::delete('/clients/{client}/meta/disconnect', [MetaOAuthController::class, 'disconnect'])->name('meta.disconnect');
+
+    // Reviews (view & sync — free; AI generate is behind plan)
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
     Route::post('/reviews/settings', [ReviewController::class, 'updateSettings'])->name('reviews.settings');
     Route::get('/reviews/{location}', [ReviewController::class, 'show'])->name('reviews.show');
     Route::post('/reviews/{location}/sync', [ReviewController::class, 'sync'])->name('reviews.sync');
-    Route::post('/reviews/{review}/generate', [ReviewController::class, 'generateReply'])->name('reviews.generate');
     Route::post('/reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
 
-    // GBP Posts & Photos
+    // GBP Posts & Photos (view & manual CRUD — free; AI generate is behind plan)
     Route::get('/gbp-content', [GbpContentController::class, 'index'])->name('gbp-content');
     Route::post('/gbp-content/posts', [GbpContentController::class, 'storePost'])->name('gbp-content.posts.store');
-    Route::post('/gbp-content/posts/generate', [GbpContentController::class, 'generatePostCopy'])->name('gbp-content.posts.generate');
     Route::post('/gbp-content/posts/{post}/publish', [GbpContentController::class, 'publishExistingPost'])->name('gbp-content.posts.publish');
     Route::post('/gbp-content/posts/{post}', [GbpContentController::class, 'updatePost'])->name('gbp-content.posts.update');
     Route::delete('/gbp-content/posts/{post}', [GbpContentController::class, 'destroyPost'])->name('gbp-content.posts.destroy');
     Route::post('/gbp-content/photos', [GbpContentController::class, 'storePhoto'])->name('gbp-content.photos.store');
-    Route::post('/gbp-content/photos/caption', [GbpContentController::class, 'generateCaption'])->name('gbp-content.photos.caption');
     Route::post('/gbp-content/photos/{photo}/publish', [GbpContentController::class, 'publishExistingPhoto'])->name('gbp-content.photos.publish');
     Route::delete('/gbp-content/photos/{photo}', [GbpContentController::class, 'destroyPhoto'])->name('gbp-content.photos.destroy');
 
@@ -148,14 +143,9 @@ Route::middleware(['auth', 'plan'])->group(function () {
     Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
     Route::post('/leads/{lead}/move', [LeadController::class, 'move'])->name('leads.move');
 
-    // Meta connect (OAuth)
-    Route::get('/clients/{client}/meta/connect', [MetaOAuthController::class, 'connect'])->name('meta.connect');
-    Route::delete('/clients/{client}/meta/disconnect', [MetaOAuthController::class, 'disconnect'])->name('meta.disconnect');
-
-    // Social
+    // Social (view & manual post — free; AI caption is behind plan)
     Route::get('/social', [SocialController::class, 'index'])->name('social');
     Route::post('/social', [SocialController::class, 'store'])->name('social.store');
-    Route::post('/social/caption', [SocialController::class, 'caption'])->name('social.caption');
     Route::post('/social/{post}/retry', [SocialController::class, 'retry'])->name('social.retry');
 
     // WhatsApp
@@ -166,19 +156,9 @@ Route::middleware(['auth', 'plan'])->group(function () {
     Route::get('/ads', [AdController::class, 'index'])->name('ads');
     Route::post('/ads', [AdController::class, 'store'])->name('ads.store');
 
-    // Keyword Suggestion (AI)
-    Route::get('/keywords', [KeywordController::class, 'index'])->name('keywords');
-    Route::post('/keywords/generate', [KeywordController::class, 'generate'])->name('keywords.generate');
-
-    // Local Rank Checker
-    Route::get('/rank-checker', [RankCheckerController::class, 'index'])->name('rank-checker');
-    Route::post('/rank-checker/check', [RankCheckerController::class, 'check'])->name('rank-checker.check');
-
-    // AI Generated Media
-    Route::get('/ai-media', [AiMediaController::class, 'index'])->name('ai-media');
-    Route::post('/ai-media/generate', [AiMediaController::class, 'generate'])->name('ai-media.generate');
-    Route::delete('/ai-media/{media}', [AiMediaController::class, 'destroy'])->name('ai-media.destroy');
-    Route::post('/ai-media/{media}/use-as-photo', [AiMediaController::class, 'useAsPhoto'])->name('ai-media.use-as-photo');
+    // Insights (live Google data — free)
+    Route::get('/insights', [\App\Http\Controllers\InsightsController::class, 'index'])->name('insights');
+    Route::get('/insights/download', [\App\Http\Controllers\InsightsController::class, 'download'])->name('insights.download');
 
     // Invoicing / accounting module
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices');
@@ -214,25 +194,50 @@ Route::middleware(['auth', 'plan'])->group(function () {
     Route::get('/tally-export', [TallyExportController::class, 'index'])->name('tally-export');
     Route::get('/tally-export/download', [TallyExportController::class, 'export'])->name('tally-export.download');
 
-    // One-Click Optimization
+    // One-Click Optimize (view page — free; run uses credits checked in controller)
     Route::get('/optimize', [OptimizationController::class, 'index'])->name('optimize');
-    Route::post('/optimize/run', [OptimizationController::class, 'run'])->name('optimize.run');
 
-    // AI Mode (chat assistant)
+    // Local Rank Checker (view — free)
+    Route::get('/rank-checker', [RankCheckerController::class, 'index'])->name('rank-checker');
+
+    // Google Audit (view — free)
+    Route::get('/audit', [AuditController::class, 'index'])->name('audit');
+
+    // Competitors (view — free)
+    Route::get('/competitors', [CompetitorController::class, 'index'])->name('competitors');
+
+    // Keywords (view — free)
+    Route::get('/keywords', [KeywordController::class, 'index'])->name('keywords');
+
+    // AI Media (view & manage — free)
+    Route::get('/ai-media', [AiMediaController::class, 'index'])->name('ai-media');
+    Route::delete('/ai-media/{media}', [AiMediaController::class, 'destroy'])->name('ai-media.destroy');
+    Route::post('/ai-media/{media}/use-as-photo', [AiMediaController::class, 'useAsPhoto'])->name('ai-media.use-as-photo');
+});
+
+// ---- Authenticated + active plan required (AI & premium features) ----
+Route::middleware(['auth', 'plan'])->group(function () {
+    // Buy credits
+    Route::get('/buy-credits', [BillingController::class, 'buyCredits'])->name('buy-credits');
+    Route::post('/buy-credits/instant', [BillingController::class, 'creditBuyInstant'])->name('buy-credits.instant');
+    Route::post('/buy-credits/checkout', [BillingController::class, 'creditCheckout'])->name('buy-credits.checkout');
+    Route::post('/buy-credits/verify', [BillingController::class, 'creditVerify'])->name('buy-credits.verify');
+
+    // AI-powered actions (require plan + credits)
+    Route::post('/reviews/{review}/generate', [ReviewController::class, 'generateReply'])->name('reviews.generate');
+    Route::post('/gbp-content/posts/generate', [GbpContentController::class, 'generatePostCopy'])->name('gbp-content.posts.generate');
+    Route::post('/gbp-content/photos/caption', [GbpContentController::class, 'generateCaption'])->name('gbp-content.photos.caption');
+    Route::post('/social/caption', [SocialController::class, 'caption'])->name('social.caption');
+    Route::post('/optimize/run', [OptimizationController::class, 'run'])->name('optimize.run');
+    Route::post('/keywords/generate', [KeywordController::class, 'generate'])->name('keywords.generate');
+    Route::post('/rank-checker/check', [RankCheckerController::class, 'check'])->name('rank-checker.check');
+    Route::post('/ai-media/generate', [AiMediaController::class, 'generate'])->name('ai-media.generate');
+    Route::post('/audit/run', [AuditController::class, 'run'])->name('audit.run');
+    Route::post('/competitors/run', [CompetitorController::class, 'run'])->name('competitors.run');
+
+    // AI Mode (full page — needs plan)
     Route::get('/ai', [AiModeController::class, 'index'])->name('ai');
     Route::post('/ai/send', [AiModeController::class, 'send'])->name('ai.send');
-
-    // Insights (GBP performance metrics)
-    Route::get('/insights', [\App\Http\Controllers\InsightsController::class, 'index'])->name('insights');
-    Route::get('/insights/download', [\App\Http\Controllers\InsightsController::class, 'download'])->name('insights.download');
-
-    // Google Audit
-    Route::get('/audit', [AuditController::class, 'index'])->name('audit');
-    Route::post('/audit/run', [AuditController::class, 'run'])->name('audit.run');
-
-    // Competitor Analysis
-    Route::get('/competitors', [CompetitorController::class, 'index'])->name('competitors');
-    Route::post('/competitors/run', [CompetitorController::class, 'run'])->name('competitors.run');
 });
 
 // ---- Admin only ----

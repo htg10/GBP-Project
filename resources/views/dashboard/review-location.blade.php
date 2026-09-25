@@ -230,6 +230,8 @@ async function genReply(id, btn){
             headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},
         });
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
+        if(data.error){ alert(data.error); return; }
         document.getElementById('reply-'+id).value = data.reply;
     }catch(e){ alert('Could not generate reply.'); }
     finally{ btn.textContent = original; btn.disabled = false; }

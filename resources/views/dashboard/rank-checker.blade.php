@@ -58,6 +58,8 @@ document.getElementById('r-run')?.addEventListener('click', async () => {
             body: JSON.stringify({location_id, keyword, radius_km})
         });
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
+        if(data.error){ box.innerHTML = '<div class="alert error">' + data.error + '</div>'; return; }
         render(data);
     } catch (e) {
         box.innerHTML = '<div class="alert error">Could not check ranking. Try again.</div>';

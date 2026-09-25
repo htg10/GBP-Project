@@ -47,6 +47,8 @@ document.getElementById('c-run')?.addEventListener('click', async () => {
             body: JSON.stringify({client_id: clientId, competitors, city})
         });
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
+        if(data.error){ box.innerHTML = '<div class="alert error">' + data.error + '</div>'; return; }
         render(data);
     } catch (e) {
         box.innerHTML = '<div class="alert error">Could not analyze. Try again.</div>';

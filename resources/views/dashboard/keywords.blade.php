@@ -55,6 +55,8 @@ document.getElementById('gen-btn').addEventListener('click', async () => {
             body: JSON.stringify({business, city, industry})
         });
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
+        if(data.error){ results.innerHTML = '<div class="alert error">' + data.error + '</div>'; return; }
         renderGroups(data.groups || [], data.source);
     } catch (e) {
         results.innerHTML = '<div class="alert error">Could not generate. Try again.</div>';

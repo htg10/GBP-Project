@@ -31,8 +31,126 @@
         @else
             <a href="{{ route('clients') }}" class="rf-hero-btn primary">🔗 Connect Google</a>
         @endif
-        <a href="{{ route('plans') }}" class="rf-hero-btn">⬆ Upgrade Plan</a>
     </div>
+</div>
+
+{{-- ===== Business Health Cockpit (Beacon-style) ===== --}}
+<div class="bh-cockpit">
+    <div class="bh-gauge-section">
+        <div class="bh-gauge-wrap">
+            @php
+                $score = $health['overall'];
+                $circumference = 2 * M_PI * 70;
+                $offset = $circumference - ($circumference * $score / 100);
+                $scoreColor = $score >= 75 ? '#22c55e' : ($score >= 50 ? '#f59e0b' : '#ef4757');
+                $scoreLabel = $score >= 75 ? 'Healthy' : ($score >= 50 ? 'Needs Work' : 'Critical');
+            @endphp
+            <svg class="bh-gauge" viewBox="0 0 160 160" width="160" height="160">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="var(--line)" stroke-width="10" opacity="0.3"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="{{ $scoreColor }}" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="{{ $circumference }}" stroke-dashoffset="{{ $circumference }}"
+                    data-target="{{ $offset }}" transform="rotate(-90 80 80)" class="bh-arc"/>
+            </svg>
+            <div class="bh-gauge-center">
+                <div class="bh-gauge-val" style="color:{{ $scoreColor }};">{{ $score }}</div>
+                <div class="bh-gauge-label">{{ $scoreLabel }}</div>
+            </div>
+        </div>
+        <div class="bh-gauge-title">Business Health</div>
+        <div class="bh-gauge-sub">Score reflects reviews, posts, photos, social, leads & connections</div>
+    </div>
+
+    <div class="bh-sub-grid">
+        @foreach($health['subScores'] as $sub)
+            @php
+                $barW = min(100, max(0, $sub['score']));
+                $pillClass = $sub['score'] >= 70 ? 'bh-pill-high' : ($sub['score'] >= 40 ? 'bh-pill-med' : 'bh-pill-low');
+            @endphp
+            <div class="bh-sub-tile">
+                <div class="bh-sub-top">
+                    <span class="bh-sub-icon" style="color:{{ $sub['color'] }};">{{ $sub['icon'] }}</span>
+                    <span class="bh-sub-name">{{ $sub['label'] }}</span>
+                    <span class="bh-pill {{ $pillClass }}">{{ $sub['score'] }}%</span>
+                </div>
+                <div class="bh-sub-bar-track">
+                    <div class="bh-sub-bar-fill" style="width:{{ $barW }}%;background:{{ $sub['color'] }};"></div>
+                </div>
+                <div class="bh-sub-detail">{{ $sub['detail'] }}</div>
+            </div>
+        @endforeach
+    </div>
+</div>
+
+{{-- ===== "Do Next" Action Queue (Beacon-style) ===== --}}
+@if(!empty($health['doNext']))
+<div class="dn-section">
+    <div class="dn-header">
+        <div>
+            <h3 class="dn-title">What to Do Next</h3>
+            <p class="dn-subtitle">Prioritized actions to grow your business health score</p>
+        </div>
+        <a href="{{ route('optimize') }}" class="btn" style="padding:8px 16px;font-size:12.5px;">⚡ One-Click Optimize</a>
+    </div>
+    <div class="dn-list">
+        @foreach($health['doNext'] as $idx => $action)
+            @php
+                $impactColor = match($action['impact']) {
+                    'critical' => 'var(--rose)',
+                    'high' => '#f59e0b',
+                    'medium' => 'var(--teal)',
+                    default => 'var(--muted)',
+                };
+                $impactBg = match($action['impact']) {
+                    'critical' => 'var(--rose-soft)',
+                    'high' => 'var(--amber-soft)',
+                    'medium' => 'var(--teal-soft)',
+                    default => '#eef1f8',
+                };
+            @endphp
+            <a href="{{ route($action['route']) }}" class="dn-row">
+                <span class="dn-rank">{{ $idx + 1 }}</span>
+                <span class="dn-icon">{{ $action['icon'] }}</span>
+                <div class="dn-body">
+                    <div class="dn-action-title">{{ $action['title'] }}</div>
+                    <div class="dn-action-why">{{ $action['why'] }}</div>
+                </div>
+                <span class="dn-impact" style="background:{{ $impactBg }};color:{{ $impactColor }};">{{ ucfirst($action['impact']) }}</span>
+                <span class="dn-cta">{{ $action['cta'] }} →</span>
+            </a>
+        @endforeach
+    </div>
+</div>
+@endif
+
+{{-- ===== Module Summary Cards (Beacon-style) ===== --}}
+<div class="ms-grid">
+    @php
+        $moduleCards = [
+            ['label' => 'Reviews', 'route' => 'reviews', 'icon' => '★', 'color' => '#f59e0b',
+             'value' => number_format($totalReviews), 'unit' => 'reviews', 'sub' => number_format($avgRating, 1) . '★ avg'],
+            ['label' => 'Google Posts', 'route' => 'gbp-content', 'icon' => '📝', 'color' => '#4c6fff',
+             'value' => $charts['directory']['Google'], 'unit' => 'posts', 'sub' => 'content published'],
+            ['label' => 'Social Media', 'route' => 'social', 'icon' => '💬', 'color' => '#8b5cf6',
+             'value' => $stats['posts'], 'unit' => 'posts', 'sub' => 'across platforms'],
+            ['label' => 'Leads Pipeline', 'route' => 'leads', 'icon' => '🎯', 'color' => '#ec4899',
+             'value' => $stats['leads'], 'unit' => 'leads', 'sub' => $stats['converted'] . ' converted'],
+            ['label' => 'Insights', 'route' => 'insights', 'icon' => '📊', 'color' => '#38bdf8',
+             'value' => $locations->count(), 'unit' => 'locations', 'sub' => 'performance data'],
+            ['label' => 'Ad Reports', 'route' => 'ads', 'icon' => '📢', 'color' => '#22c55e',
+             'value' => '₹' . number_format($stats['spend']), 'unit' => 'spent', 'sub' => 'campaign data'],
+        ];
+    @endphp
+    @foreach($moduleCards as $mc)
+        <a href="{{ route($mc['route']) }}" class="ms-card">
+            <div class="ms-card-top">
+                <span class="ms-card-icon" style="background:{{ $mc['color'] }}20;color:{{ $mc['color'] }};">{{ $mc['icon'] }}</span>
+                <span class="ms-card-label">{{ $mc['label'] }}</span>
+            </div>
+            <div class="ms-card-value">{{ $mc['value'] }}</div>
+            <div class="ms-card-sub">{{ $mc['sub'] }}</div>
+            <div class="ms-card-go">Open →</div>
+        </a>
+    @endforeach
 </div>
 
 {{-- ===== Section tabs ===== --}}
@@ -324,6 +442,69 @@
         .rf-rating-row{flex-direction:column;align-items:stretch;}
         .rf-donut-wrap{margin:0 auto;}
     }
+
+    /* ===== Business Health Cockpit ===== */
+    .bh-cockpit{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:18px;display:grid;grid-template-columns:220px 1fr;gap:28px;align-items:start;box-shadow:var(--shadow);}
+    .bh-gauge-section{text-align:center;}
+    .bh-gauge-wrap{position:relative;width:160px;height:160px;margin:0 auto 12px;}
+    .bh-gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .bh-gauge-val{font-size:42px;font-weight:800;line-height:1;}
+    .bh-gauge-label{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
+    .bh-gauge-title{font-size:16px;font-weight:800;letter-spacing:-.01em;}
+    .bh-gauge-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
+    .bh-sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .bh-sub-tile{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+    .bh-sub-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+    .bh-sub-icon{font-size:14px;flex-shrink:0;}
+    .bh-sub-name{font-size:12px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bh-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;}
+    .bh-pill-high{background:var(--green-soft);color:var(--green);}
+    .bh-pill-med{background:var(--amber-soft);color:#8a5a08;}
+    .bh-pill-low{background:var(--rose-soft);color:var(--rose);}
+    .bh-sub-bar-track{height:5px;border-radius:4px;background:var(--line);overflow:hidden;margin-bottom:6px;}
+    .bh-sub-bar-fill{height:100%;border-radius:4px;transition:width .8s ease;}
+    .bh-sub-detail{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* ===== Do Next Queue ===== */
+    .dn-section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:18px;box-shadow:var(--shadow);}
+    .dn-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+    .dn-title{font-size:17px;font-weight:800;letter-spacing:-.01em;}
+    .dn-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+    .dn-list{display:flex;flex-direction:column;gap:6px;}
+    .dn-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--paper);transition:border-color .15s,transform .15s,box-shadow .15s;}
+    .dn-row:hover{border-color:var(--teal);transform:translateX(3px);box-shadow:0 4px 16px rgba(76,111,255,.08);}
+    .dn-rank{width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;flex-shrink:0;}
+    .dn-icon{font-size:18px;flex-shrink:0;}
+    .dn-body{flex:1;min-width:0;}
+    .dn-action-title{font-size:13.5px;font-weight:700;}
+    .dn-action-why{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dn-impact{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+    .dn-cta{font-size:12px;font-weight:700;color:var(--teal);white-space:nowrap;flex-shrink:0;}
+
+    /* ===== Module Summary Cards ===== */
+    .ms-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;}
+    .ms-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);transition:border-color .15s,transform .15s;}
+    .ms-card:hover{border-color:var(--teal);transform:translateY(-2px);}
+    .ms-card-top{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+    .ms-card-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;flex-shrink:0;}
+    .ms-card-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+    .ms-card-value{font-size:22px;font-weight:800;line-height:1;}
+    .ms-card-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+    .ms-card-go{font-size:11px;font-weight:700;color:var(--teal);margin-top:8px;}
+
+    @media (max-width:1000px){
+        .bh-cockpit{grid-template-columns:1fr;}
+        .bh-sub-grid{grid-template-columns:repeat(3,1fr);}
+        .ms-grid{grid-template-columns:repeat(3,1fr);}
+        .dn-cta{display:none;}
+    }
+    @media (max-width:700px){
+        .bh-sub-grid{grid-template-columns:repeat(2,1fr);}
+        .ms-grid{grid-template-columns:repeat(2,1fr);}
+        .dn-row{flex-wrap:wrap;}
+        .dn-action-why{white-space:normal;}
+        .dn-impact{order:5;}
+    }
 </style>
 @endpush
 
@@ -413,6 +594,25 @@ new Chart(document.getElementById('chartBreakdown'), {
 document.getElementById('sync-form')?.addEventListener('submit', function(){
     document.getElementById('sync-btn').disabled = true;
     document.getElementById('sync-overlay').classList.add('active');
+});
+
+// Beacon-style gauge arc animation
+document.querySelectorAll('.bh-arc').forEach(arc => {
+    const full = parseFloat(arc.getAttribute('stroke-dasharray'));
+    const target = parseFloat(arc.getAttribute('data-target'));
+    let current = full;
+    const speed = (full - target) / 40;
+    function animate() {
+        current -= speed;
+        if ((speed > 0 && current <= target) || (speed <= 0 && current >= target)) {
+            current = target;
+            arc.setAttribute('stroke-dashoffset', current);
+            return;
+        }
+        arc.setAttribute('stroke-dashoffset', current);
+        requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
 });
 </script>
 @endpush

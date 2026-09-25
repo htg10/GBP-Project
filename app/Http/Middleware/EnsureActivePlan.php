@@ -19,7 +19,15 @@ class EnsureActivePlan
         $sub = $user->agency?->subscription;
 
         if (! $sub || $sub->status === 'TRIALING') {
-            return redirect()->route('plans')->with('error', 'Please purchase a plan to access this feature.');
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'error' => 'This feature requires an active plan.',
+                    'upgrade_url' => route('plans'),
+                    'needs_plan' => true,
+                ], 402);
+            }
+
+            return redirect()->route('plans')->with('error', 'This AI feature requires an active plan. Choose a plan to unlock AI replies, audits, and more.');
         }
 
         return $next($request);

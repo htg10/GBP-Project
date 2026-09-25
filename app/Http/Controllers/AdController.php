@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdReport;
 use App\Models\Client;
+use App\Models\Integration;
 use Illuminate\Http\Request;
 
 class AdController extends Controller
@@ -18,6 +19,16 @@ class AdController extends Controller
         $clients = Client::where('agency_id', $aid)
             ->when($clientId, fn ($q) => $q->where('id', $clientId))->get();
 
+        $hasGoogle = Integration::where('agency_id', $aid)
+            ->where('provider', 'GOOGLE_GBP')->whereNotNull('access_token')
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->exists();
+
+        $hasMeta = Integration::where('agency_id', $aid)
+            ->where('provider', 'META')->whereNotNull('access_token')
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->exists();
+
         $insight = null;
         if ($reports->count() >= 2) {
             $sorted = $reports->sortBy(fn ($r) => $r->spend / max($r->conversions, 1))->values();
@@ -30,9 +41,13 @@ class AdController extends Controller
             'spend' => $reports->sum('spend'),
             'clicks' => $reports->sum('clicks'),
             'conversions' => $reports->sum('conversions'),
+            'leads' => $reports->sum('leads'),
         ];
 
-        return view('dashboard.ads', compact('reports', 'clients', 'insight', 'totals'));
+        $googleReports = $reports->where('network', 'GOOGLE');
+        $metaReports = $reports->where('network', 'META');
+
+        return view('dashboard.ads', compact('reports', 'clients', 'insight', 'totals', 'hasGoogle', 'hasMeta', 'googleReports', 'metaReports'));
     }
 
     public function store(Request $request)

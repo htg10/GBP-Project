@@ -85,7 +85,6 @@
         <a href="{{ route('admin.users') }}" class="nav-item {{ request()->routeIs('admin.users') ? 'active' : '' }}">◉ Users</a>
         <a href="{{ route('admin.plans') }}" class="nav-item {{ request()->routeIs('admin.plans') ? 'active' : '' }}">▤ Plans</a>
         <a href="{{ route('admin.credit-packages') }}" class="nav-item {{ request()->routeIs('admin.credit-packages') ? 'active' : '' }}">⚡ Credit Packs</a>
-        <a href="{{ route('admin.billing') }}" class="nav-item {{ request()->routeIs('admin.billing') ? 'active' : '' }}">▭ Billing</a>
         <div class="nav-spacer"></div>
         <a href="{{ route('dashboard') }}" class="back">⇄ User view</a>
         <form method="POST" action="{{ route('logout') }}">@csrf<button class="signout" type="submit">⇦ Sign out</button></form>

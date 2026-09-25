@@ -43,6 +43,11 @@ class ReviewController extends Controller
             ->orderBy('title')
             ->get();
 
+        // CLIENT_OWNER with a single location — skip the grid, go straight to their reviews.
+        if ($clientId && $locations->count() === 1) {
+            return redirect()->route('reviews.show', $locations->first());
+        }
+
         $connectedClientIds = Integration::where('agency_id', $agencyId)
             ->where('provider', 'GOOGLE_GBP')->whereNotNull('access_token')
             ->when($clientId, fn ($q) => $q->where('client_id', $clientId))

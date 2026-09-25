@@ -95,7 +95,7 @@
         <strong style="font-size:15px;">Quick Manage</strong>
         <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
             <a href="{{ route('admin.users') }}" class="btn btn-ghost" style="justify-content:space-between;">Manage Users <span>→</span></a>
-            <a href="{{ route('admin.billing') }}" class="btn btn-ghost" style="justify-content:space-between;">Billing &amp; Plans <span>→</span></a>
+            <a href="{{ route('admin.plans') }}" class="btn btn-ghost" style="justify-content:space-between;">Manage Plans <span>→</span></a>
             <a href="{{ route('dashboard') }}" class="btn" style="justify-content:space-between;">Open User Dashboard <span>→</span></a>
         </div>
     </div>

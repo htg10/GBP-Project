@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiMedia;
+use App\Models\Client;
 use App\Models\GbpLocation;
 use App\Models\GbpPhoto;
 use App\Models\GbpPost;
@@ -60,17 +62,37 @@ class GbpContentController extends Controller
     public function index(Request $request)
     {
         $agencyId = $request->user()->agency_id;
+        $clientId = $request->user()->client_id;
 
-        $locations = GbpLocation::whereHas('client', fn ($q) => $q->where('agency_id', $agencyId))
+        $locations = GbpLocation::whereHas('client', function ($q) use ($agencyId, $clientId) {
+                $q->where('agency_id', $agencyId);
+                if ($clientId) $q->where('id', $clientId);
+            })
             ->with('client')->get();
 
-        $posts = GbpPost::whereHas('location.client', fn ($q) => $q->where('agency_id', $agencyId))
+        $posts = GbpPost::whereHas('location.client', function ($q) use ($agencyId, $clientId) {
+                $q->where('agency_id', $agencyId);
+                if ($clientId) $q->where('id', $clientId);
+            })
             ->with('location.client')->latest()->get();
 
-        $photos = GbpPhoto::whereHas('location.client', fn ($q) => $q->where('agency_id', $agencyId))
+        $photos = GbpPhoto::whereHas('location.client', function ($q) use ($agencyId, $clientId) {
+                $q->where('agency_id', $agencyId);
+                if ($clientId) $q->where('id', $clientId);
+            })
             ->with('location.client')->latest()->get();
 
-        return view('dashboard.gbp-content', compact('locations', 'posts', 'photos'));
+        $aiMedia = AiMedia::where('agency_id', $agencyId)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->latest()->get();
+
+        $clients = Client::where('agency_id', $agencyId)
+            ->when($clientId, fn ($q) => $q->where('id', $clientId))
+            ->get();
+
+        $isClientScoped = (bool) $clientId;
+
+        return view('dashboard.gbp-content', compact('locations', 'posts', 'photos', 'aiMedia', 'clients', 'isClientScoped'));
     }
 
     public function generatePostCopy(Request $request)

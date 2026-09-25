@@ -19,11 +19,15 @@ class AuditController extends Controller
 
     public function index(Request $request)
     {
+        $clientId = $request->user()->client_id;
         $clients = Client::where('agency_id', $request->user()->agency_id)
+            ->when($clientId, fn ($q) => $q->where('id', $clientId))
             ->withCount('locations')
             ->get();
 
-        return view('dashboard.audit', compact('clients'));
+        $autoClient = $clients->count() === 1 ? $clients->first() : null;
+
+        return view('dashboard.audit', compact('clients', 'autoClient'));
     }
 
     public function run(Request $request)

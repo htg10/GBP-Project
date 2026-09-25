@@ -13,11 +13,12 @@ use App\Models\SocialPost;
 use App\Models\Subscription;
 use App\Services\AiService;
 use App\Services\GbpService;
+use App\Services\HealthScoreService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, HealthScoreService $healthService)
     {
         $user = $request->user();
         $aid = $user->agency_id;
@@ -147,11 +148,13 @@ class DashboardController extends Controller
             'posts' => SocialPost::where('agency_id', $aid)->count(),
         ];
 
+        $health = $healthService->compute($aid, $clientId);
+
         return view('dashboard.overview', compact(
             'stats', 'clients', 'locations', 'connectedClientIds', 'hasGoogle',
             'totalReviews', 'avgRating', 'repliedCount', 'pendingCount',
             'creditBalance', 'photosUploaded', 'recentReviews', 'charts',
-            'currentPlan', 'lastSynced'
+            'currentPlan', 'lastSynced', 'health'
         ));
     }
 

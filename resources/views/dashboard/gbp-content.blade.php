@@ -105,6 +105,7 @@
         .gp-thumb{width:100%;min-height:160px;}
         .gp-photo-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
         .ph-cat-grid{grid-template-columns:repeat(2,1fr);}
+        #ai-gen-section{grid-template-columns:1fr !important;}
     }
     @media (max-width:480px){
         .gp-stats{grid-template-columns:1fr 1fr;}
@@ -172,6 +173,7 @@
 <div class="gp-tabs">
     <button type="button" class="gp-tab active" data-tab="posts" onclick="switchTab('posts', this)">Posts<span class="count">({{ $totalPosts }})</span></button>
     <button type="button" class="gp-tab" data-tab="photos" onclick="switchTab('photos', this)">Photos & Media<span class="count">({{ $photos->count() }})</span></button>
+    <button type="button" class="gp-tab" data-tab="ai-generate" onclick="switchTab('ai-generate', this)">✦ AI Generate<span class="count">({{ $aiMedia->count() }})</span></button>
 </div>
 
 {{-- ============ POSTS TAB ============ --}}
@@ -277,6 +279,100 @@
     @endif
 </div>
 
+{{-- ============ AI GENERATE TAB ============ --}}
+<div id="tab-ai-generate" style="display:none;">
+    @php $creditBalance = \App\Models\Subscription::where('agency_id', auth()->user()->agency_id)->value('credit_balance') ?? 0; @endphp
+
+    <div style="background:var(--teal-soft);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:14px;">✦</div>
+            <div>
+                <strong style="font-size:13.5px;">AI Image Generator</strong>
+                <div style="font-size:12px;color:var(--teal-ink);margin-top:2px;">Describe your image and AI will create it. Each generation uses <strong>{{ \App\Services\CreditService::COSTS['ai_media_generate'] }} credits</strong>.</div>
+            </div>
+        </div>
+        <span class="badge teal" style="white-space:nowrap;font-size:12px;padding:5px 14px;">{{ number_format($creditBalance) }} Credits Left</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;" id="ai-gen-section">
+        <div class="card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:var(--teal-soft);display:grid;place-items:center;font-size:16px;">✦</div>
+                <div>
+                    <div style="font-weight:700;">Generate Image</div>
+                    <div style="font-size:12px;color:var(--muted);">Transform your ideas into visuals</div>
+                </div>
+            </div>
+
+            @if($isClientScoped)
+                <input type="hidden" id="gm-client" value="">
+            @else
+                <label><span class="lbl">Client (optional)</span>
+                    <select id="gm-client">
+                        <option value="">-- No client --</option>
+                        @foreach($clients as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
+                    </select>
+                </label>
+            @endif
+
+            <label><span class="lbl">Image Prompt *</span>
+                <textarea id="gm-prompt" rows="4" placeholder="Describe the image you want to create..." style="min-height:100px;"></textarea>
+            </label>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Be specific and descriptive for best results (minimum 10 characters).</div>
+
+            <button type="button" class="btn" style="width:100%;justify-content:center;margin-top:18px;padding:13px 20px;" id="gm-submit" onclick="generateMedia()">
+                ✦ Generate Image
+            </button>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;">
+            <div id="ai-preview-area" style="text-align:center;width:100%;">
+                <div style="width:80px;height:80px;border-radius:16px;background:var(--teal-soft);display:grid;place-items:center;margin:0 auto 12px;font-size:30px;">🖼</div>
+                <div style="font-weight:700;font-size:15px;">No image generated yet</div>
+                <div style="font-size:13px;color:var(--muted);margin-top:4px;">Fill the form and click Generate</div>
+            </div>
+        </div>
+    </div>
+
+    @if($aiMedia->isNotEmpty())
+    <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:16px;font-weight:700;">Generated Images</div>
+        <div style="font-size:13px;color:var(--muted);">{{ $aiMedia->count() }} image{{ $aiMedia->count() !== 1 ? 's' : '' }}</div>
+    </div>
+    <div class="gp-photo-grid">
+        @foreach($aiMedia as $m)
+            <div class="gp-photo">
+                <div class="gp-photo-img-wrap">
+                    <img src="{{ $m->image_data }}" alt="" class="gp-photo-img">
+                    <span class="badge gp-photo-badge {{ $m->source === 'ai' ? 'teal' : 'gray' }}">{{ $m->source === 'ai' ? 'AI' : 'Placeholder' }}</span>
+                    <div class="gp-photo-overlay">
+                        @if($locations->isNotEmpty())
+                            <form method="POST" action="{{ route('ai-media.use-as-photo', $m) }}" style="display:flex;gap:4px;align-items:center;">
+                                @csrf
+                                <select name="gbp_location_id" style="padding:4px 6px;font-size:11px;border-radius:6px;max-width:120px;">
+                                    @foreach($locations as $loc)
+                                        <option value="{{ $loc->id }}">{{ $loc->title ?: $loc->google_name }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="btn" style="padding:4px 10px;font-size:11px;">Use</button>
+                            </form>
+                        @endif
+                        <form method="POST" action="{{ route('ai-media.destroy', $m) }}" onsubmit="return confirm('Delete?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn del" style="padding:4px 10px;font-size:11px;">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="gp-photo-body">
+                    <p class="gp-photo-caption">{{ \Illuminate\Support\Str::limit($m->prompt, 80) }}</p>
+                    <div class="gp-photo-date">{{ $m->created_at->format('M d, Y h:i A') }}</div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+    @endif
+</div>
+
 {{-- ============ ADD / EDIT POST MODAL ============ --}}
 <div class="modal-bg" id="post-modal">
     <div class="modal" style="max-width:580px;">
@@ -295,6 +391,7 @@
             @csrf
             <input type="hidden" name="type" id="post-type-input" value="UPDATE">
 
+            @if($locations->count() > 1)
             <label><span class="lbl">Location</span>
                 <select name="gbp_location_id" id="post-location-select">
                     @foreach($locations as $loc)
@@ -302,6 +399,10 @@
                     @endforeach
                 </select>
             </label>
+            @else
+            <input type="hidden" name="gbp_location_id" value="{{ $locations->first()?->id }}">
+            <select id="post-location-select" style="display:none;"><option value="{{ $locations->first()?->id }}" data-business="{{ $locations->first()?->client->name ?? '' }}"></option></select>
+            @endif
 
             <div style="margin-top:12px;">
                 <span class="lbl">Image (optional)</span>
@@ -360,6 +461,7 @@
 
         <form method="POST" action="{{ route('gbp-content.photos.store') }}" enctype="multipart/form-data" id="photo-form">
             @csrf
+            @if($locations->count() > 1)
             <label><span class="lbl">Location</span>
                 <select name="gbp_location_id" id="photo-location-select">
                     @foreach($locations as $loc)
@@ -367,6 +469,9 @@
                     @endforeach
                 </select>
             </label>
+            @else
+            <input type="hidden" name="gbp_location_id" value="{{ $locations->first()?->id }}">
+            @endif
 
             {{-- Drag & Drop Zone --}}
             <div style="margin-top:14px;">
@@ -436,6 +541,7 @@ function switchTab(tab, btn){
     btn.classList.add('active');
     document.getElementById('tab-posts').style.display = tab === 'posts' ? '' : 'none';
     document.getElementById('tab-photos').style.display = tab === 'photos' ? '' : 'none';
+    document.getElementById('tab-ai-generate').style.display = tab === 'ai-generate' ? '' : 'none';
 }
 
 function filterPosts(status, btn){
@@ -605,6 +711,7 @@ async function genPostCopy(btn){
     try{
         const res = await fetch('{{ route("gbp-content.posts.generate") }}',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},body:JSON.stringify({type,business})});
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
         if(data.error){alert(data.error);return;}
         body.value = data.body;
         document.getElementById('char-count').textContent = body.value.length + ' / 1500';
@@ -619,11 +726,56 @@ async function genCaption(btn){
     try{
         const res = await fetch('{{ route("gbp-content.photos.caption") }}',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},body:JSON.stringify({prompt:url})});
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
         if(data.error){alert(data.error);return;}
         caption.value = data.caption;
     }catch(e){alert('Could not generate.');}
     finally{btn.textContent='✦ Generate caption with AI';btn.disabled=false;}
 }
+
+/* ========== AI Image Generator ========== */
+async function generateMedia(){
+    const prompt = document.getElementById('gm-prompt').value.trim();
+    const clientEl = document.getElementById('gm-client');
+    const client_id = clientEl ? clientEl.value : null;
+    if (!prompt || prompt.length < 10) { alert('Please describe the image (at least 10 characters).'); return; }
+
+    const btn = document.getElementById('gm-submit');
+    const preview = document.getElementById('ai-preview-area');
+    btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">↻</span> Generating...';
+    btn.disabled = true;
+    preview.innerHTML = '<div style="font-size:14px;color:var(--muted);">Generating your image...</div>';
+
+    try {
+        const res = await fetch("{{ route('ai-media.generate') }}", {
+            method: 'POST',
+            headers: {'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json'},
+            body: JSON.stringify({prompt, client_id: client_id || null})
+        });
+        let data = {};
+        try { data = await res.json(); } catch(_) {}
+
+        if (res.status === 402 && window.handlePlanRequired(data)) return;
+        if (!res.ok || data.error) {
+            const msg = data.error
+                || (data.errors && Object.values(data.errors)[0] && Object.values(data.errors)[0][0])
+                || data.message
+                || 'Generation failed. Try a shorter, simpler prompt.';
+            preview.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:30px;margin-bottom:8px;">⚠</div><div style="color:var(--rose);font-size:13.5px;font-weight:600;max-width:240px;margin:0 auto;">' + msg + '</div></div>';
+            return;
+        }
+
+        if (data.media) {
+            preview.innerHTML = '<img src="' + data.media.image_data + '" style="max-width:100%;max-height:360px;border-radius:12px;object-fit:contain;">';
+            setTimeout(() => location.reload(), 1500);
+        }
+    } catch (e) {
+        preview.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:30px;margin-bottom:8px;">⚠</div><div style="color:var(--rose);font-size:13.5px;font-weight:600;max-width:240px;margin:0 auto;">Image is taking too long. Try again with a shorter prompt.</div></div>';
+    } finally {
+        btn.innerHTML = '✦ Generate Image'; btn.disabled = false;
+    }
+}
 </script>
+<style>@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>
 @endpush
 @endsection

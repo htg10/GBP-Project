@@ -100,6 +100,7 @@
     </div>
 @else
     <div class="au-controls">
+        @if($clients->count() > 1)
         <label>
             <span class="lbl">Business Location</span>
             <select id="audit-client">
@@ -108,6 +109,16 @@
                 @endforeach
             </select>
         </label>
+        @else
+        <input type="hidden" id="audit-client" value="{{ $clients->first()->id }}">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar" style="background:var(--teal-soft);color:var(--teal-ink);">{{ strtoupper(substr($clients->first()->name, 0, 1)) }}</div>
+            <div>
+                <div style="font-weight:700;font-size:14px;">{{ $clients->first()->name }}</div>
+                <div style="font-size:12px;color:var(--muted);">{{ $clients->first()->locations_count }} location{{ $clients->first()->locations_count !== 1 ? 's' : '' }}</div>
+            </div>
+        </div>
+        @endif
         <button class="btn" id="run-btn">📊 Analyze Profile</button>
     </div>
 
@@ -149,6 +160,7 @@ document.getElementById('run-btn')?.addEventListener('click', async () => {
             body: JSON.stringify({client_id: clientId})
         });
         const data = await res.json();
+        if (res.status === 402 && window.handlePlanRequired(data)) return;
         if (data.error) {
             box.innerHTML = '<div class="card" style="border-left:3px solid var(--rose);padding:18px;"><strong style="color:var(--rose);">Error:</strong> ' + esc(data.error) + '</div>';
             return;
@@ -289,6 +301,10 @@ function formatTips(text){
 function esc(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+@if($autoClient)
+document.addEventListener('DOMContentLoaded', () => document.getElementById('run-btn')?.click());
+@endif
 </script>
 @endpush
 @endsection

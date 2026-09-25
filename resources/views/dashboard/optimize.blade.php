@@ -311,6 +311,7 @@ async function runOptimize(){
             headers:{'X-CSRF-TOKEN': csrf, 'Content-Type':'application/json'}
         });
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
         if(data.error){
             box.innerHTML = '<div class="opt-results-card" style="border-left:3px solid var(--rose);"><strong style="color:var(--rose);">Error:</strong> ' + escapeHtml(data.error) + '</div>';
             return;

@@ -1,40 +1,78 @@
 @extends('layouts.admin')
 @section('title', 'Plans')
 @section('content')
-<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
-    <div class="page-head" style="margin:0;"><h1>Plans</h1><p>Create plans with GST-inclusive pricing and per-plan module access.</p></div>
-    <button class="btn" onclick="openCreate()">+ New plan</button>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px;">
+    <div><h1 style="font-size:22px;font-weight:800;">Plans</h1><p style="font-size:13px;color:var(--muted);margin-top:3px;">GST-inclusive pricing with per-plan module access.</p></div>
+    <button class="btn" onclick="openCreate()" style="gap:6px;">
+        <span style="width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:14px;">+</span> New plan
+    </button>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <table>
-        <thead><tr><th>Plan</th><th>Price (incl. GST)</th><th>GST breakdown</th><th>Credits</th><th>Access</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
-        <tbody>
-            @forelse($plans as $p)
-                <tr>
-                    <td><strong>{{ $p->name }}</strong><div style="font-size:12px;color:var(--muted);">{{ $p->code }}</div></td>
-                    <td><strong>₹{{ number_format($p->price) }}</strong></td>
-                    <td style="font-size:12.5px;color:var(--muted);">Base ₹{{ number_format($p->baseAmount(),2) }}<br>GST {{ $p->gst_rate }}% = ₹{{ number_format($p->gstAmount(),2) }}</td>
-                    <td>{{ number_format($p->credits) }}</td>
-                    <td style="font-size:12px;color:var(--muted);">{{ empty($p->permissions) ? 'All modules' : count($p->permissions).' modules' }}</td>
-                    <td><span class="badge {{ $p->is_active ? 'teal' : 'dark' }}">{{ $p->is_active ? 'Active' : 'Hidden' }}</span></td>
-                    <td style="text-align:right;white-space:nowrap;">
-                        <button class="icon-btn" onclick='openEdit(@json($p))'>✎</button>
-                        <form method="POST" action="{{ route('admin.plans.destroy', $p) }}" style="display:inline;" onsubmit="return confirm('Delete this plan?')">
-                            @csrf @method('DELETE')<button class="icon-btn" style="color:var(--rose);">🗑</button>
-                        </form>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">No plans yet. Create your first plan.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
+<div class="ap-grid">
+    @forelse($plans as $p)
+        <div class="card ap-card {{ $p->is_active ? '' : 'ap-hidden' }}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <strong style="font-size:16px;">{{ $p->name }}</strong>
+                        <span class="badge {{ $p->is_active ? 'teal' : 'dark' }}" style="font-size:10.5px;">{{ $p->is_active ? 'Active' : 'Hidden' }}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ $p->code }}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:24px;font-weight:800;color:var(--teal);">₹{{ number_format($p->price) }}</div>
+                    <div style="font-size:11px;color:var(--muted);">/month incl. GST</div>
+                </div>
+            </div>
+
+            <div class="ap-details">
+                <div class="ap-detail-row">
+                    <span class="ap-detail-label">Base Price</span>
+                    <span>₹{{ number_format($p->baseAmount(),2) }}</span>
+                </div>
+                <div class="ap-detail-row">
+                    <span class="ap-detail-label">GST ({{ $p->gst_rate }}%)</span>
+                    <span>₹{{ number_format($p->gstAmount(),2) }}</span>
+                </div>
+                <div class="ap-detail-row">
+                    <span class="ap-detail-label">Credits / month</span>
+                    <span style="font-weight:700;color:var(--purple);">{{ number_format($p->credits) }}</span>
+                </div>
+                <div class="ap-detail-row">
+                    <span class="ap-detail-label">Module Access</span>
+                    <span>{{ empty($p->permissions) ? 'All modules' : count($p->permissions).' modules' }}</span>
+                </div>
+            </div>
+
+            @if(!empty($p->features))
+            <div style="padding-top:10px;border-top:1px solid var(--line);">
+                <div style="font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Features</div>
+                @foreach($p->features as $f)
+                    <div style="font-size:12.5px;padding:3px 0;color:var(--ink);">✓ {{ $f }}</div>
+                @endforeach
+            </div>
+            @endif
+
+            <div class="au-actions" style="padding-top:12px;border-top:1px solid var(--line);">
+                <button class="btn btn-ghost au-act-btn" onclick='openEdit(@json($p))'>✎ Edit</button>
+                <form method="POST" action="{{ route('admin.plans.destroy', $p) }}" style="display:inline;flex:1;" onsubmit="return confirm('Delete {{ addslashes($p->name) }}?')">
+                    @csrf @method('DELETE')
+                    <button class="btn au-act-btn au-del-btn" style="width:100%;">🗑 Delete</button>
+                </form>
+            </div>
+        </div>
+    @empty
+        <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">
+            <div style="font-size:36px;margin-bottom:10px;">📋</div>
+            No plans yet. Create your first plan.
+        </div>
+    @endforelse
 </div>
 
+{{-- Modal --}}
 <div class="modal-bg" id="plan-modal">
     <div class="modal" style="max-width:560px;">
-        <h2 id="pm-title" style="font-size:18px;margin-bottom:14px;">New plan</h2>
+        <h2 id="pm-title" style="font-size:18px;font-weight:700;margin-bottom:16px;">New plan</h2>
         <form method="POST" id="plan-form" action="{{ route('admin.plans.store') }}">
             @csrf
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -72,6 +110,22 @@
     </div>
 </div>
 
+@push('head')
+<style>
+.ap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.ap-card{padding:20px;display:flex;flex-direction:column;gap:12px;transition:box-shadow .15s,border-color .15s;}
+.ap-card:hover{border-color:#d3d9e8;box-shadow:0 2px 12px rgba(20,30,60,.08);}
+.ap-card.ap-hidden{opacity:.65;border-style:dashed;}
+.ap-details{display:flex;flex-direction:column;gap:6px;padding:10px 14px;background:var(--paper);border-radius:10px;}
+.ap-detail-row{display:flex;justify-content:space-between;font-size:12.5px;}
+.ap-detail-label{color:var(--muted);}
+.au-actions{display:flex;gap:8px;}
+.au-act-btn{padding:6px 12px !important;font-size:12px !important;flex:1;}
+.au-del-btn{background:var(--rose-soft) !important;color:var(--rose) !important;border:1px solid #f8c4c9 !important;}
+.au-del-btn:hover{background:#fde0e3 !important;}
+@media(max-width:640px){.ap-grid{grid-template-columns:1fr;}}
+</style>
+@endpush
 @push('scripts')
 <script>
 const pform = document.getElementById('plan-form');

@@ -171,6 +171,7 @@ async function genCaption(btn){
     try{
         const res = await fetch("{{ route('social.caption') }}",{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json'},body:JSON.stringify({prompt})});
         const data = await res.json();
+        if(res.status === 402 && window.handlePlanRequired(data)) return;
         if(data.error){ alert(data.error); return; }
         body.value = data.body; updatePreview();
     }catch(e){ alert('Could not generate.'); }

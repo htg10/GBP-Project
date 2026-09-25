@@ -290,8 +290,7 @@
         @endif
         <a href="{{ route('reviews') }}" class="nav-item {{ request()->routeIs('reviews') || request()->routeIs('reviews.show') ? 'active' : '' }}"><span class="ic">&#9733;</span> Reviews</a>
         <a href="{{ route('insights') }}" class="nav-item {{ request()->routeIs('insights') ? 'active' : '' }}"><span class="ic">&#128200;</span> Insights</a>
-        <a href="{{ route('gbp-content') }}" class="nav-item {{ request()->routeIs('gbp-content') ? 'active' : '' }}"><span class="ic">&#128444;</span> Posts & Photos</a>
-        <a href="{{ route('ai-media') }}" class="nav-item {{ request()->routeIs('ai-media') ? 'active' : '' }}"><span class="ic">&#127912;</span> AI Generated Media</a>
+        <a href="{{ route('gbp-content') }}" class="nav-item {{ request()->routeIs('gbp-content') || request()->routeIs('ai-media') ? 'active' : '' }}"><span class="ic">&#128444;</span> Posts & Photos</a>
         <a href="{{ route('audit') }}" class="nav-item {{ request()->routeIs('audit') ? 'active' : '' }}"><span class="ic">&#9678;</span> Google Audit</a>
         <a href="{{ route('competitors') }}" class="nav-item {{ request()->routeIs('competitors') ? 'active' : '' }}"><span class="ic">&#9876;</span> Competitors</a>
         <a href="{{ route('rank-checker') }}" class="nav-item {{ request()->routeIs('rank-checker') ? 'active' : '' }}"><span class="ic">&#128205;</span> Rank Checker</a>
@@ -301,12 +300,18 @@
         <a href="{{ route('ads') }}" class="nav-item {{ request()->routeIs('ads') ? 'active' : '' }}"><span class="ic">&#9636;</span> Ads Reports</a>
         <a href="{{ route('keywords') }}" class="nav-item {{ request()->routeIs('keywords') ? 'active' : '' }}"><span class="ic">&#128269;</span> Keywords</a>
 
+        @php
+            $activeSub = auth()->user()->agency?->subscription;
+            $hasPlan = $activeSub && $activeSub->status !== 'TRIALING';
+        @endphp
+        @if($hasPlan)
         <div class="nav-label">Billing</div>
-        <a href="{{ route('plans') }}" class="nav-item {{ request()->routeIs('plans') ? 'active' : '' }}"><span class="ic">&#11014;</span> Plans &amp; Upgrade</a>
-        <a href="{{ route('client-billing') }}" class="nav-item {{ request()->routeIs('client-billing') ? 'active' : '' }}"><span class="ic">&#128179;</span> Billing &amp; Invoices</a>
         <a href="{{ route('credits') }}" class="nav-item {{ request()->routeIs('credits') ? 'active' : '' }}"><span class="ic">&#9889;</span> Credits</a>
         <a href="{{ route('buy-credits') }}" class="nav-item {{ request()->routeIs('buy-credits') ? 'active' : '' }}"><span class="ic">&#128722;</span> Buy Credits</a>
+        <a href="{{ route('client-billing') }}" class="nav-item {{ request()->routeIs('client-billing') ? 'active' : '' }}"><span class="ic">&#128179;</span> Billing &amp; Invoices</a>
+        <a href="{{ route('plans') }}" class="nav-item {{ request()->routeIs('plans') ? 'active' : '' }}"><span class="ic">&#11014;</span> Plans</a>
         <a href="{{ route('billing-settings') }}" class="nav-item {{ request()->routeIs('billing-settings') ? 'active' : '' }}"><span class="ic">&#9881;</span> Billing Settings</a>
+        @endif
 
         <div class="nav-spacer"></div>
         <a href="{{ route('profile') }}" class="nav-item {{ request()->routeIs('profile') ? 'active' : '' }}"><span class="ic">&#9680;</span> My Profile</a>
@@ -355,6 +360,29 @@ function updateDarkIcon(){
     }
     updateDarkIcon();
 })();
+
+// Global handler: intercept AI feature 402s and show upgrade prompt
+window.handlePlanRequired = function(response) {
+    if (response && response.needs_plan) {
+        if (!document.getElementById('plan-prompt-modal')) {
+            const m = document.createElement('div');
+            m.id = 'plan-prompt-modal';
+            m.className = 'modal-bg open';
+            m.innerHTML = `<div class="modal" style="text-align:center;max-width:380px;">
+                <div style="font-size:40px;margin-bottom:12px;">&#9889;</div>
+                <h2 style="font-size:18px;margin-bottom:6px;">Unlock AI Features</h2>
+                <p style="font-size:13.5px;color:var(--muted);margin-bottom:20px;line-height:1.5;">
+                    This feature requires an active plan. Choose a plan to get AI replies, audits, keywords, and more.
+                </p>
+                <a href="${response.upgrade_url || '/plans'}" class="btn" style="width:100%;justify-content:center;margin-bottom:10px;">View Plans & Upgrade</a>
+                <button type="button" class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="document.getElementById('plan-prompt-modal').remove()">Maybe Later</button>
+            </div>`;
+            document.body.appendChild(m);
+        }
+        return true;
+    }
+    return false;
+};
 </script>
 @stack('scripts')
 </body>
