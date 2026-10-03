@@ -5,15 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\GbpLocation;
 use App\Models\Review;
+use App\Models\Subscription;
 use App\Services\AiService;
 use App\Services\CreditService;
 use App\Services\GbpService;
 use Illuminate\Http\Request;
 
-/**
- * JSON twin of ReviewController. Same authorization rules (agency + client
- * scoping) and the same AI-reply credit flow as the web app.
- */
 class ReviewController extends Controller
 {
     public function __construct(
@@ -22,7 +19,6 @@ class ReviewController extends Controller
         private CreditService $creditService,
     ) {}
 
-    /** One row per GBP location, with review counts — mirrors the web card grid. */
     public function index(Request $request)
     {
         $agencyId = $request->user()->agency_id;
@@ -52,7 +48,6 @@ class ReviewController extends Controller
         ]));
     }
 
-    /** Paginated review list for a single location. */
     public function show(Request $request, GbpLocation $location)
     {
         $this->authorizeLocation($request, $location);
@@ -64,8 +59,17 @@ class ReviewController extends Controller
 
         $reviews = $query->orderByDesc('review_time')->paginate(15);
 
+        $all = Review::where('gbp_location_id', $location->id)->get();
+        $stats = [
+            'total' => $all->count(),
+            'avg' => $all->count() ? round($all->avg('star_rating'), 1) : 0,
+            'unreplied' => $all->whereNull('reply_text')->count(),
+            'negative' => $all->where('sentiment', 'NEGATIVE')->count(),
+        ];
+
         return response()->json([
             'location' => ['id' => $location->id, 'title' => $location->title],
+            'stats' => $stats,
             'reviews' => $reviews->through(fn ($r) => [
                 'id' => $r->id,
                 'reviewer_name' => $r->reviewer_name,
@@ -85,6 +89,74 @@ class ReviewController extends Controller
         ]);
     }
 
+    public function sync(Request $request, GbpLocation $location)
+    {
+        $this->authorizeLocation($request, $location);
+        $agencyId = $request->user()->agency_id;
+
+        $raw = $this->gbp->listReviews($location->client, $location->google_name);
+
+        if (empty($raw)) {
+            return response()->json([
+                'message' => $this->gbp->lastError() ?? 'Google returned no reviews for this location.',
+                'synced' => 0,
+            ]);
+        }
+
+        $autoReply = (bool) Subscription::where('agency_id', $agencyId)->value('auto_reply');
+
+        $count = 0;
+        foreach ($raw as $r) {
+            $data = [
+                'agency_id' => $agencyId,
+                'gbp_location_id' => $location->id,
+                'reviewer_name' => $r['name'],
+                'reviewer_photo' => $r['photo'] ?? null,
+                'star_rating' => $r['rating'],
+                'comment' => $r['comment'],
+                'sentiment' => $this->ai->analyzeSentiment($r['comment'] ?? ''),
+                'review_time' => $r['time'],
+            ];
+            if (! empty($r['reply'])) {
+                $data['reply_text'] = $r['reply'];
+                $data['replied_at'] = $r['reply_time'] ?? now();
+            } else {
+                $data['reply_text'] = null;
+                $data['replied_at'] = null;
+            }
+            $review = Review::updateOrCreate(
+                ['google_review_id' => $r['reviewId']],
+                $data
+            );
+
+            if ($autoReply && ! $review->reply_text && $this->creditService->canAfford($agencyId, 'ai_review_reply')) {
+                $reply = $this->ai->generateReviewReply($review->reviewer_name, $review->comment ?? '', $review->star_rating);
+                $this->gbp->putReply($location->client, $location->google_name, $review->google_review_id, $reply);
+                $review->update(['reply_text' => $reply, 'replied_at' => now(), 'replied_by' => $request->user()->id]);
+                $this->creditService->deduct($agencyId, $request->user()->id, 'ai_review_reply', 'Auto-reply');
+            }
+            $count++;
+        }
+
+        return response()->json(['success' => true, 'synced' => $count, 'auto_reply' => $autoReply]);
+    }
+
+    public function updateSettings(Request $request)
+    {
+        $data = $request->validate([
+            'auto_reply' => 'nullable|boolean',
+            'wa_notify' => 'nullable|boolean',
+        ]);
+
+        Subscription::where('agency_id', $request->user()->agency_id)
+            ->update([
+                'auto_reply' => $request->boolean('auto_reply'),
+                'wa_notify' => $request->boolean('wa_notify'),
+            ]);
+
+        return response()->json(['success' => true]);
+    }
+
     public function generateReply(Request $request, Review $review)
     {
         $this->authorizeReview($request, $review);
@@ -92,7 +164,7 @@ class ReviewController extends Controller
         $agencyId = $request->user()->agency_id;
         if (! $this->creditService->canAfford($agencyId, 'ai_review_reply')) {
             return response()->json([
-                'error' => 'Insufficient credits. You need '.CreditService::COSTS['ai_review_reply'].' credit(s) for this action.',
+                'error' => 'Insufficient credits. You need ' . CreditService::COSTS['ai_review_reply'] . ' credit(s).',
             ], 402);
         }
 
@@ -118,17 +190,14 @@ class ReviewController extends Controller
             'replied_by' => $request->user()->id,
         ]);
 
-        return response()->json([
-            'success' => true,
-            'posted_to_google' => $ok,
-        ]);
+        return response()->json(['success' => true, 'posted_to_google' => $ok]);
     }
 
     private function authorizeLocation(Request $request, GbpLocation $location): void
     {
         abort_unless($location->client->agency_id === $request->user()->agency_id, 403);
         $scoped = $request->user()->client_id;
-        abort_if($scoped && $location->client_id !== $scoped, 403, 'You can only access your own business.');
+        abort_if($scoped && $location->client_id !== $scoped, 403);
     }
 
     private function authorizeReview(Request $request, Review $review): void

@@ -33,6 +33,10 @@ return [
         'redirect' => env('GOOGLE_LOGIN_REDIRECT_URI', env('APP_URL', 'http://127.0.0.1:8099') . '/auth/google/callback'),
     ],
 
+    'google_mobile' => [
+        'client_id' => env('GOOGLE_MOBILE_CLIENT_ID', '969050138931-vosvqeuto8ocmcfls94f16rk2so27ah7.apps.googleusercontent.com'),
+    ],
+
     'meta' => [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),

@@ -6,15 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\GbpLocation;
 use App\Models\Integration;
 use App\Models\Review;
+use App\Services\AiService;
+use App\Services\GbpService;
 use App\Services\HealthScoreService;
 use Illuminate\Http\Request;
 
-/**
- * JSON twin of DashboardController::index — same scoping/queries, trimmed
- * to what the mobile Overview screen needs (health score + recent reviews +
- * KPI totals). Chart-series data is left out for now; add it here if a
- * mobile charts screen needs it later.
- */
 class DashboardController extends Controller
 {
     public function index(Request $request, HealthScoreService $healthService)
@@ -73,6 +69,55 @@ class DashboardController extends Controller
                 'location_title' => $r->location?->title,
                 'review_time' => $r->review_time,
             ]),
+        ]);
+    }
+
+    public function syncAll(Request $request, GbpService $gbp, AiService $ai)
+    {
+        $user = $request->user();
+        $aid = $user->agency_id;
+        $clientId = $user->client_id;
+
+        $connectedClientIds = Integration::where('agency_id', $aid)
+            ->where('provider', 'GOOGLE_GBP')->whereNotNull('access_token')
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->pluck('client_id')->all();
+
+        if (empty($connectedClientIds)) {
+            return response()->json(['message' => 'Connect a client to Google Business Profile first.'], 422);
+        }
+
+        $locations = GbpLocation::whereIn('client_id', $connectedClientIds)->with('client')->get();
+
+        $count = 0;
+        foreach ($locations as $loc) {
+            $raw = $gbp->listReviews($loc->client, $loc->google_name);
+            foreach ($raw as $r) {
+                $data = [
+                    'agency_id' => $aid,
+                    'gbp_location_id' => $loc->id,
+                    'reviewer_name' => $r['name'],
+                    'reviewer_photo' => $r['photo'] ?? null,
+                    'star_rating' => $r['rating'],
+                    'comment' => $r['comment'],
+                    'sentiment' => $ai->analyzeSentiment($r['comment'] ?? ''),
+                    'review_time' => $r['time'],
+                ];
+                if (! empty($r['reply'])) {
+                    $data['reply_text'] = $r['reply'];
+                    $data['replied_at'] = $r['reply_time'] ?? now();
+                }
+                Review::updateOrCreate(
+                    ['google_review_id' => $r['reviewId']],
+                    $data
+                );
+                $count++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'synced' => $count,
         ]);
     }
 }

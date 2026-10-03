@@ -29,16 +29,17 @@ use App\Http\Controllers\AdController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\MobileLoginController;
 
 // ---- Guest ----
-Route::get('/', fn () => view('welcome'))->name('home');
+Route::get('/', fn() => view('welcome'))->name('home');
 
 // Policy pages (public)
-Route::get('/pricing-policy', fn () => view('policies.pricing'))->name('policy.pricing');
-Route::get('/shipping-policy', fn () => view('policies.shipping'))->name('policy.shipping');
-Route::get('/terms-and-conditions', fn () => view('policies.terms'))->name('policy.terms');
-Route::get('/privacy-policy', fn () => view('policies.privacy'))->name('policy.privacy');
-Route::get('/cancellation-refund-policy', fn () => view('policies.refund'))->name('policy.refund');
+Route::get('/pricing-policy', fn() => view('policies.pricing'))->name('policy.pricing');
+Route::get('/shipping-policy', fn() => view('policies.shipping'))->name('policy.shipping');
+Route::get('/terms-and-conditions', fn() => view('policies.terms'))->name('policy.terms');
+Route::get('/privacy-policy', fn() => view('policies.privacy'))->name('policy.privacy');
+Route::get('/cancellation-refund-policy', fn() => view('policies.refund'))->name('policy.refund');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -55,6 +56,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // cookie can be dropped across the Google redirect, so we don't require login
 // here. The client/agency is recovered from the cached state instead.
 Route::get('/google/callback', [GoogleOAuthController::class, 'callback'])->name('google.callback');
+Route::get('/mobile-login/{code}', [MobileLoginController::class, 'consume'])->name('mobile.login');
 
 // Meta OAuth callback — kept OUTSIDE the auth group for the same reason as
 // the Google one above (session cookie can drop across the redirect).
