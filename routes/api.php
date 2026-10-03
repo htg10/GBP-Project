@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- Auth & Profile ----
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/web-session', [AuthController::class, 'webSession']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::get('/subscription', [AuthController::class, 'subscription']);

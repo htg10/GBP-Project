@@ -97,8 +97,22 @@ class AuthController extends Controller
             });
         }
 
+        $token = $user->createToken('mobile')->plainTextToken;
+
         $code = Str::random(64);
         Cache::put('mobile_login:' . $code, $user->id, now()->addSeconds(60));
+
+        return response()->json([
+            'token' => $token,
+            'user' => $this->userPayload($user),
+            'login_url' => route('mobile.login', ['code' => $code]),
+        ]);
+    }
+
+    public function webSession(Request $request)
+    {
+        $code = Str::random(64);
+        Cache::put('mobile_login:' . $code, $request->user()->id, now()->addSeconds(60));
 
         return response()->json([
             'login_url' => route('mobile.login', ['code' => $code]),
