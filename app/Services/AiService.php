@@ -22,6 +22,12 @@ class AiService
         return config('services.gemini.key') ?: null;
     }
 
+    private function geminiUrl(string $model, string $action = 'generateContent'): string
+    {
+        $base = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:{$action}";
+        return $base.'?key='.urlencode($this->key());
+    }
+
     private function callGemini(string $prompt): ?string
     {
         if (! $this->key()) {
@@ -29,12 +35,9 @@ class AiService
         }
         try {
             $model = config('services.gemini.model', 'gemini-2.0-flash');
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+            $url = $this->geminiUrl($model);
 
-            // Send the key in a header (works for both AIza... and AQ.... keys,
-            // and keeps the key out of the URL / logs).
             $res = Http::timeout(20)
-                ->withHeaders(['x-goog-api-key' => $this->key()])
                 ->post($url, [
                     'contents' => [['parts' => [['text' => $prompt]]]],
                     'generationConfig' => ['temperature' => 0.7, 'maxOutputTokens' => 500],
@@ -165,10 +168,9 @@ class AiService
     {
         try {
             $model = config('services.gemini.image_model', 'gemini-2.5-flash-image');
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+            $url = $this->geminiUrl($model);
 
             $res = Http::timeout(45)
-                ->withHeaders(['x-goog-api-key' => $this->key()])
                 ->post($url, [
                     'contents' => [['parts' => [['text' => $prompt]]]],
                 ]);

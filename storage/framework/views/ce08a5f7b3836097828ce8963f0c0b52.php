@@ -1,3 +1,4 @@
+
 <?php $__env->startSection('title', $location->title ?: 'Reviews'); ?>
 <?php $__env->startSection('content'); ?>
 
