@@ -34,7 +34,7 @@ return [
     ],
 
     'google_mobile' => [
-        'client_id' => env('GOOGLE_MOBILE_CLIENT_ID', '969050138931-vosvqeuto8ocmcfls94f16rk2so27ah7.apps.googleusercontent.com'),
+        'client_id' => env('GOOGLE_MOBILE_CLIENT_ID', '969050138931-uclne6fp24kgcpjsmfnleeo3ee83vdgp.apps.googleusercontent.com'),
     ],
 
     'meta' => [
