@@ -19,6 +19,10 @@ class MobileLoginController extends Controller
         Auth::loginUsingId($userId);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        $user = Auth::user();
+        $sub = $user->agency?->subscription;
+        $dest = (!$sub || $sub->status === 'TRIALING') ? route('plans') : route('dashboard');
+
+        return redirect()->intended($dest);
     }
 }

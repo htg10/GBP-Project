@@ -5,7 +5,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Agency;
 use App\Models\Client;
@@ -63,7 +63,38 @@ class AuthController extends Controller
         $user = User::where('email', $info['email'])->first();
 
         if (!$user) {
-            return response()->json(['message' => 'Is email se koi account nahi mila'], 404);
+            $name = $info['name'] ?? $info['email'];
+
+            $user = DB::transaction(function () use ($info, $name) {
+                $agency = Agency::create([
+                    'name' => $name . "'s Business",
+                    'slug' => Str::slug($name) . '-' . Str::lower(Str::random(5)),
+                ]);
+
+                $client = Client::create([
+                    'agency_id' => $agency->id,
+                    'name' => $name . "'s Business",
+                    'email' => $info['email'],
+                ]);
+
+                $user = User::create([
+                    'agency_id' => $agency->id,
+                    'name' => $name,
+                    'email' => $info['email'],
+                    'password' => Hash::make(Str::random(24)),
+                    'role' => 'CLIENT_OWNER',
+                    'client_id' => $client->id,
+                    'avatar' => $info['picture'] ?? null,
+                ]);
+
+                Subscription::create([
+                    'agency_id' => $agency->id,
+                    'plan' => 'STARTER',
+                    'status' => 'TRIALING',
+                ]);
+
+                return $user;
+            });
         }
 
         $code = Str::random(64);
