@@ -67,41 +67,76 @@ class BillingController extends Controller
         ]);
     }
 
-    public function upgrade(Request $request)
+    /** Active credit packs for the Buy Credits screen. */
+    public function creditPackages(Request $request)
     {
-        $this->ensureCanManage($request);
+        $packages = CreditPackage::where('is_active', true)->orderBy('sort')->orderBy('credits')->get();
 
-        $data = $request->validate(['plan' => 'required|exists:plans,code']);
-        $plan = Plan::where('code', $data['plan'])->firstOrFail();
-        $agencyId = $request->user()->agency_id;
-
-        Subscription::updateOrCreate(
-            ['agency_id' => $agencyId],
-            ['plan' => $plan->code, 'status' => 'ACTIVE', 'renews_at' => now()->addMonth()]
-        );
-
-        $this->credits->setMonthly($agencyId, $plan->code, $plan->credits);
-
-        return response()->json(['success' => true, 'plan' => $plan->code]);
+        return response()->json([
+            'packages' => $packages->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'credits' => $p->credits,
+                'price' => $p->price,
+                'gst_rate' => $p->gst_rate,
+            ]),
+            'credit_balance' => $this->credits->balance($request->user()->agency_id),
+            'razorpay_ready' => $this->razorpay->configured(),
+        ]);
     }
 
-    public function buyCredits(Request $request)
+    /** Payment history for the Billing & Invoices screen. */
+    public function payments(Request $request)
     {
-        $this->ensureCanManage($request);
-
-        $data = $request->validate(['package' => 'required|exists:credit_packages,id']);
-        $pkg = CreditPackage::findOrFail($data['package']);
         $agencyId = $request->user()->agency_id;
+        $sub = Subscription::where('agency_id', $agencyId)->first();
+        $payments = Payment::where('agency_id', $agencyId)->latest()->take(100)->get();
 
-        $newBalance = $this->credits->add(
-            $agencyId,
-            $pkg->credits,
-            'credit_purchase',
-            "Bought {$pkg->name} ({$pkg->credits} credits)",
-            $request->user()->id
-        );
+        return response()->json([
+            'current_plan' => $sub->plan ?? null,
+            'status' => $sub->status ?? null,
+            'renews_at' => $sub->renews_at ?? null,
+            'payments' => $payments->map(fn ($p) => [
+                'id' => $p->id,
+                'plan' => $p->plan,
+                'amount' => $p->amount / 100,
+                'currency' => $p->currency ?? 'INR',
+                'status' => $p->status,
+                'razorpay_payment_id' => $p->razorpay_payment_id,
+                'created_at' => $p->created_at,
+            ]),
+        ]);
+    }
 
-        return response()->json(['success' => true, 'balance' => $newBalance]);
+    /** Invoice details for one payment (same numbers the web invoice page shows). */
+    public function paymentInvoice(Request $request, Payment $payment)
+    {
+        abort_unless($payment->agency_id === $request->user()->agency_id, 403);
+
+        $plan = Plan::where('code', $payment->plan)->first();
+        $gstRate = $plan?->gst_rate ?? 18;
+
+        $total = $payment->amount / 100;
+        $base = round($total / (1 + $gstRate / 100), 2);
+        $gst = round($total - $base, 2);
+
+        $user = $request->user();
+
+        return response()->json([
+            'invoice_number' => 'INV-' . str_pad((string) $payment->id, 5, '0', STR_PAD_LEFT),
+            'date' => $payment->created_at?->format('Y-m-d'),
+            'plan_name' => $plan?->name ?? $payment->plan,
+            'payment_id' => $payment->razorpay_payment_id,
+            'status' => $payment->status,
+            'gst_rate' => $gstRate,
+            'base' => $base,
+            'gst' => $gst,
+            'total' => $total,
+            'billed_to' => [
+                'name' => $user->client?->name ?? $user->agency?->name,
+                'email' => $user->email,
+            ],
+        ]);
     }
 
     public function checkout(Request $request)

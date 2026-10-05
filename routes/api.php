@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\AiMediaController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\InvoicingController;
+use App\Http\Controllers\Api\TallyExportController;
 
 Route::get('/ping', fn() => ['ok' => true]);
 
@@ -37,6 +38,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::get('/subscription', [AuthController::class, 'subscription']);
+    Route::post('/email/send-verification', [AuthController::class, 'sendVerification']);
+    Route::post('/email/change', [AuthController::class, 'changeEmail']);
+
+    // ---- AI media gallery ----
+    Route::get('/ai-media', [AiMediaController::class, 'index']);
+
+    // ---- Client connections ----
+    Route::delete('/clients/{client}/google/disconnect', [ClientController::class, 'disconnectGoogle']);
+    Route::delete('/clients/{client}/meta/disconnect', [ClientController::class, 'disconnectMeta']);
+
+    // ---- Tally export ----
+    Route::get('/tally-export', [TallyExportController::class, 'summary']);
+    Route::get('/tally-export/download', [TallyExportController::class, 'export']);
 
     // ---- Dashboard ----
     Route::get('/dashboard', [DashboardController::class, 'index']);
@@ -101,8 +115,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ---- Billing ----
     Route::get('/billing/plans', [BillingController::class, 'plans']);
     Route::get('/billing/credits', [BillingController::class, 'credits']);
-    Route::post('/billing/upgrade', [BillingController::class, 'upgrade']);
-    Route::post('/billing/buy-credits', [BillingController::class, 'buyCredits']);
+    Route::get('/billing/credit-packages', [BillingController::class, 'creditPackages']);
+    Route::get('/billing/payments', [BillingController::class, 'payments']);
+    Route::get('/billing/payments/{payment}/invoice', [BillingController::class, 'paymentInvoice']);
     Route::post('/billing/checkout', [BillingController::class, 'checkout']);
     Route::post('/billing/verify', [BillingController::class, 'verify']);
     Route::post('/billing/credit-checkout', [BillingController::class, 'creditCheckout']);

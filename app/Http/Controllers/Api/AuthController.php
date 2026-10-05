@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use App\Http\Controllers\Controller;
 use App\Models\Agency;
 use App\Models\Client;
@@ -119,6 +121,60 @@ class AuthController extends Controller
         ]);
     }
 
+    public function sendVerification(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'Email already verified.'], 422);
+        }
+
+        $throttleKey = 'verify-email-' . $user->id;
+        if (Cache::has($throttleKey)) {
+            return response()->json(['message' => 'Verification email already sent. Please wait a minute before resending.'], 429);
+        }
+
+        $verifyUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addHours(24),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        try {
+            Mail::send([], [], function ($message) use ($user, $verifyUrl) {
+                $message->to($user->email)
+                    ->subject('Verify your email — ReviewFlow')
+                    ->html(
+                        '<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px;">'
+                        . '<h2 style="margin:0 0 8px;">Verify your email</h2>'
+                        . '<p style="color:#6f7d78;margin:0 0 24px;line-height:1.6;">Click the button below to verify your email address and unlock all ReviewFlow features.</p>'
+                        . '<a href="' . $verifyUrl . '" style="display:inline-block;padding:12px 28px;background:#4c6fff;color:#fff;border-radius:10px;text-decoration:none;font-weight:600;">Verify Email Address</a>'
+                        . '</div>'
+                    );
+            });
+
+            Cache::put($throttleKey, true, 60);
+
+            return response()->json(['success' => true, 'message' => 'Verification link sent to ' . $user->email]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Could not send email. Please check the mail configuration.'], 500);
+        }
+    }
+
+    public function changeEmail(Request $request)
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            'email' => 'required|email|unique:users,email,' . $user->id,
+        ]);
+
+        $user->email = $data['email'];
+        $user->email_verified_at = null;
+        $user->save();
+
+        return response()->json(['success' => true, 'email' => $user->email]);
+    }
+
     public function register(Request $request)
     {
         $data = $request->validate([
@@ -215,6 +271,7 @@ class AuthController extends Controller
             'agency_id' => $user->agency_id,
             'client_id' => $user->client_id,
             'is_admin' => $user->isAdmin(),
+            'email_verified' => (bool) $user->email_verified_at,
         ];
     }
 }

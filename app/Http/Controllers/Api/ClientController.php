@@ -207,6 +207,22 @@ class ClientController extends Controller
         return response()->json(['success' => true, 'imported' => $imported]);
     }
 
+    public function disconnectGoogle(Request $request, Client $client)
+    {
+        $this->authorizeClient($request, $client);
+        Integration::where('client_id', $client->id)->where('provider', 'GOOGLE_GBP')->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function disconnectMeta(Request $request, Client $client)
+    {
+        $this->authorizeClient($request, $client);
+        Integration::where('client_id', $client->id)->where('provider', 'META_GRAPH')->delete();
+
+        return response()->json(['success' => true]);
+    }
+
     private function authorizeClient(Request $request, Client $client): void
     {
         abort_unless($client->agency_id === $request->user()->agency_id, 403);
