@@ -42,8 +42,15 @@ class MetaOAuthController extends Controller
     {
         abort_unless($client->agency_id === $request->user()->agency_id, 403);
 
+        // Mobile app ke flow mein error ke baad "back()" se bhejna theek nahi
+        // (mobile browser session mein koi meaningful "previous page" nahi hota),
+        // isliye mobile requests ke liye hamesha app ke custom scheme par redirect karte hain.
+        $isMobile = $request->boolean('mobile');
+        $mobileError = fn (string $message) => redirect('eydia://meta-connected?status=error&message=' . urlencode($message));
+
         if (! $this->configured()) {
-            return back()->with('error', 'Meta is not configured yet. Add META_APP_ID and META_APP_SECRET to your .env first.');
+            $message = 'Meta is not configured yet. Add META_APP_ID and META_APP_SECRET to your .env first.';
+            return $isMobile ? $mobileError($message) : back()->with('error', $message);
         }
 
         // Cached (not session) — same reasoning as the Google OAuth flow: the
@@ -52,6 +59,7 @@ class MetaOAuthController extends Controller
         Cache::put('mauth_'.$state, [
             'client_id' => $client->id,
             'agency_id' => $request->user()->agency_id,
+            'mobile' => $isMobile,
         ], now()->addMinutes(15));
 
         $params = http_build_query([
@@ -68,19 +76,28 @@ class MetaOAuthController extends Controller
     // Step 2 — Facebook redirects back here with a code.
     public function callback(Request $request)
     {
-        if ($request->filled('error')) {
-            return redirect()->route('clients')->with('error', 'Meta connection was cancelled.');
-        }
-
+        // Pulled once up front so every exit path (including "user cancelled")
+        // knows whether this was the app's flow and can send the browser back
+        // to the app instead of the web dashboard.
         $state = $request->query('state');
         $stored = $state ? Cache::pull('mauth_'.$state) : null;
+        $isMobile = $stored['mobile'] ?? false;
+        $mobileError = fn (string $message) => redirect('eydia://meta-connected?status=error&message=' . urlencode($message));
+
+        if ($request->filled('error')) {
+            $message = 'Meta connection was cancelled.';
+            return $isMobile ? $mobileError($message) : redirect()->route('clients')->with('error', $message);
+        }
+
         if (! $stored) {
-            return redirect()->route('clients')->with('error', 'Invalid state. Please try connecting again.');
+            $message = 'Invalid state. Please try connecting again.';
+            return $isMobile ? $mobileError($message) : redirect()->route('clients')->with('error', $message);
         }
 
         $client = Client::find($stored['client_id']);
         if (! $client || $client->agency_id !== $stored['agency_id']) {
-            return redirect()->route('clients')->with('error', 'Client not found.');
+            $message = 'Client not found.';
+            return $isMobile ? $mobileError($message) : redirect()->route('clients')->with('error', $message);
         }
 
         // Exchange code -> short-lived user token.
@@ -92,8 +109,9 @@ class MetaOAuthController extends Controller
         ]);
 
         if (! $res->successful()) {
-            return redirect()->route('clients.show', $client)
-                ->with('error', 'Could not get token from Meta: '.$res->body());
+            return $isMobile
+                ? $mobileError('Could not get token from Meta.')
+                : redirect()->route('clients.show', $client)->with('error', 'Could not get token from Meta: '.$res->body());
         }
 
         $shortToken = $res->json('access_token');
@@ -115,8 +133,10 @@ class MetaOAuthController extends Controller
         ]);
 
         if (! $pages->successful() || empty($pages->json('data'))) {
-            return redirect()->route('clients.show', $client)
-                ->with('error', 'Connected to Meta, but no Facebook Page was found. Make sure this user is an admin of a Page.');
+            $message = 'Connected to Meta, but no Facebook Page was found. Make sure this user is an admin of a Page.';
+            return $isMobile
+                ? $mobileError($message)
+                : redirect()->route('clients.show', $client)->with('error', $message);
         }
 
         $page = $pages->json('data')[0]; // MVP: first Page returned.
@@ -137,6 +157,11 @@ class MetaOAuthController extends Controller
         );
 
         $igNote = isset($page['instagram_business_account']) ? ' + Instagram' : ' (no linked Instagram account found)';
+
+        if ($isMobile) {
+            return redirect('eydia://meta-connected?status=success&client=' . $client->id);
+        }
+
         return redirect()->route('clients.show', $client)
             ->with('success', "Meta connected — Page \"{$page['name']}\"{$igNote}. Social posts now publish for real.");
     }
