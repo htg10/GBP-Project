@@ -246,4 +246,73 @@ class AiService
             ['group' => 'Services', 'keywords' => ["{$b} consultation {$city}", "emergency {$b} {$city}", "{$b} reviews {$city}"]],
         ]];
     }
+
+    /**
+     * Same as generateKeywords(), but uses extractJson() for a more
+     * tolerant parse of Gemini's response. New method — generateKeywords()
+     * itself (used by the web app) is untouched, so this only affects
+     * callers that explicitly use it.
+     */
+    public function generateKeywordsRobust(string $business, string $city, ?string $industry = null): array
+    {
+        $industryLine = $industry ? " in the {$industry} industry" : '';
+
+        if ($this->key()) {
+            $prompt = "You are a local SEO expert. Suggest Google search keywords a customer would use to find this business, for local ranking.\n"
+                ."Business: {$business}{$industryLine}\nCity: {$city}\n\n"
+                ."Return ONLY valid JSON (no markdown, no backticks) in exactly this shape:\n"
+                .'{"groups":[{"group":"High intent","keywords":["..."]},{"group":"Local","keywords":["..."]},{"group":"Long-tail","keywords":["..."]},{"group":"Services","keywords":["..."]}]}'."\n"
+                ."Give 5-7 keywords per group. Keywords must be realistic search phrases including the city where natural.";
+
+            $raw = $this->callGemini($prompt);
+            if ($raw) {
+                $data = $this->extractJson($raw);
+                if (is_array($data) && isset($data['groups']) && is_array($data['groups'])) {
+                    return ['source' => 'ai', 'groups' => $data['groups']];
+                }
+            }
+        }
+
+        // Local fallback (no key or parse failed / rate-limited) — templated keywords.
+        $b = strtolower($industry ?: $business);
+        return ['source' => 'fallback', 'groups' => [
+            ['group' => 'High intent', 'keywords' => ["best {$b} in {$city}", "{$b} near me", "top rated {$b} {$city}", "affordable {$b} {$city}"]],
+            ['group' => 'Local', 'keywords' => ["{$b} {$city}", "{$city} {$b} services", "{$b} open now {$city}"]],
+            ['group' => 'Long-tail', 'keywords' => ["how much does {$b} cost in {$city}", "book {$b} appointment {$city}", "trusted {$b} clinic {$city}"]],
+            ['group' => 'Services', 'keywords' => ["{$b} consultation {$city}", "emergency {$b} {$city}", "{$b} reviews {$city}"]],
+        ]];
+    }
+
+    /**
+     * Gemini is asked to return ONLY JSON, but it sometimes wraps the answer
+     * in markdown fences or adds a short sentence before/after the JSON
+     * object anyway. Stripping fences and then json_decode-ing the raw
+     * string (as some callers used to do) fails whenever that extra text is
+     * present, even though the JSON itself is valid.
+     *
+     * This pulls out the first {...} object in the text and decodes that,
+     * which tolerates any surrounding prose. Returns null if nothing
+     * decodable is found, so callers can fall back exactly as before.
+     *
+     * New method — existing callers (web + API controllers using their own
+     * parsing) are unaffected unless they are updated to call this.
+     */
+    public function extractJson(string $raw): ?array
+    {
+        $clean = trim(preg_replace('/```json|```/', '', $raw));
+
+        $direct = json_decode($clean, true);
+        if (is_array($direct)) {
+            return $direct;
+        }
+
+        $start = strpos($clean, '{');
+        $end = strrpos($clean, '}');
+        if ($start === false || $end === false || $end < $start) {
+            return null;
+        }
+
+        $parsed = json_decode(substr($clean, $start, $end - $start + 1), true);
+        return is_array($parsed) ? $parsed : null;
+    }
 }

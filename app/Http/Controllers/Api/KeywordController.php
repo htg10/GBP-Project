@@ -24,7 +24,7 @@ class KeywordController extends Controller
             return response()->json(['error' => 'Insufficient credits (' . CreditService::COSTS['ai_keyword_gen'] . ' needed).'], 402);
         }
 
-        $result = $this->ai->generateKeywords($data['business'], $data['city'], $data['industry'] ?? null);
+        $result = $this->ai->generateKeywordsRobust($data['business'], $data['city'], $data['industry'] ?? null);
         $this->creditService->deduct($agencyId, $request->user()->id, 'ai_keyword_gen', $data['business']);
 
         return response()->json(['groups' => $result['groups'], 'source' => $result['source']]);

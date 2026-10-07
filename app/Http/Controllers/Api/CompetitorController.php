@@ -59,8 +59,7 @@ class CompetitorController extends Controller
         $result = ['summary' => '', 'strengths' => [], 'gaps' => [], 'actions' => [], 'source' => 'fallback'];
 
         $raw = $this->ai->generateContent($prompt);
-        $clean = trim(preg_replace('/```json|```/', '', $raw));
-        $parsed = json_decode($clean, true);
+        $parsed = $this->ai->extractJson($raw);
         if (is_array($parsed) && isset($parsed['summary'])) {
             $result = array_merge($result, $parsed, ['source' => 'ai']);
         } else {

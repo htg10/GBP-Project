@@ -81,8 +81,7 @@ class RankCheckerController extends Controller
             . 'tips = 4 concrete actions to improve local ranking for this keyword.';
 
         $raw = $this->ai->generateContent($prompt);
-        $clean = trim(preg_replace('/```json|```/', '', $raw));
-        $parsed = json_decode($clean, true);
+        $parsed = $this->ai->extractJson($raw);
 
         if (is_array($parsed) && isset($parsed['summary'])) {
             return [
