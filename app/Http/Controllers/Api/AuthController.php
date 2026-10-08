@@ -183,7 +183,10 @@ class AuthController extends Controller
             'password' => 'required|string|min:8',
         ]);
 
-        $agency = Agency::create(['name' => $data['name'] . "'s Agency"]);
+        $agency = Agency::create([
+            'name' => $data['name'] . "'s Agency",
+            'slug' => Str::slug($data['name']) . '-' . Str::lower(Str::random(5)),
+        ]);
 
         $user = \App\Models\User::create([
             'agency_id' => $agency->id,
