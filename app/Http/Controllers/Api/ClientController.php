@@ -183,17 +183,11 @@ class ClientController extends Controller
             $locations = $gbp->listLocations($integration, $account['name']);
             foreach ($locations as $loc) {
                 GbpLocation::updateOrCreate(
-                    ['google_name' => $loc['name']],
+                    ['google_name' => $loc['google_name']],
                     [
-                        'agency_id' => $request->user()->agency_id,
                         'client_id' => $client->id,
-                        'title' => $loc['title'] ?? $loc['name'],
+                        'title' => $loc['title'] ?? $loc['google_name'],
                         'address' => $loc['address'] ?? null,
-                        'phone' => $loc['phone'] ?? null,
-                        'website' => $loc['website'] ?? null,
-                        'latitude' => $loc['latitude'] ?? null,
-                        'longitude' => $loc['longitude'] ?? null,
-                        'place_id' => $loc['placeId'] ?? null,
                     ]
                 );
                 $imported++;
