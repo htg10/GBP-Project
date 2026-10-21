@@ -58,22 +58,18 @@ class CompetitorController extends Controller
         $city = $data['city'] ?: '';
         $compList = implode(', ', $competitors);
 
-        $prompt = "You are a local marketing strategist. Compare this business against its competitors and give a practical competitive analysis.\n\n"
-            ."My business: {$client->name}".($client->industry ? " ({$client->industry})" : '')."\n"
-            ."My Google stats: {$avg}/5 average from {$total} reviews.\n"
-            ."City: {$city}\n"
-            ."Competitors: {$compList}\n\n"
-            ."Return ONLY valid JSON (no markdown/backticks) in this shape:\n"
-            .'{"summary":"2-3 sentence overview","strengths":["..."],"gaps":["..."],"actions":["..."]}'."\n"
-            ."strengths = where my business likely leads; gaps = where competitors likely beat me; "
-            ."actions = 4 concrete steps to win locally. Keep each point one short line.";
+        $prompt = "Compare {$client->name} ({$avg}/5, {$total} reviews) vs {$compList} in {$city}.\n"
+            ."Return ONLY JSON: {\"summary\":\"2-3 sentences\",\"strengths\":[\"...\"],\"gaps\":[\"...\"],\"actions\":[\"4 steps\"]}\n"
+            ."Keep each point one line.";
 
         $result = ['summary' => '', 'strengths' => [], 'gaps' => [], 'actions' => [], 'source' => 'fallback'];
 
-        $raw = $this->ai->generateContent($prompt);
-        // generateContent wraps with a copywriter persona; for JSON we parse whatever comes back.
-        $clean = trim(preg_replace('/```json|```/', '', $raw));
-        $parsed = json_decode($clean, true);
+        $raw = $this->ai->rawPrompt($prompt, 300);
+        $parsed = null;
+        if ($raw !== null) {
+            $clean = trim(preg_replace('/```json|```/', '', $raw));
+            $parsed = json_decode($clean, true);
+        }
         if (is_array($parsed) && isset($parsed['summary'])) {
             $result = array_merge($result, $parsed, ['source' => 'ai']);
         } else {

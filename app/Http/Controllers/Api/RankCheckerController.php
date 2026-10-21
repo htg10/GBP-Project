@@ -71,19 +71,15 @@ class RankCheckerController extends Controller
 
     private function aiEstimate(string $businessName, string $keyword, string $where, int $radius): array
     {
-        $prompt = "You are a local SEO analyst. Estimate how a business likely ranks in Google's local search results.\n\n"
-            . "Business: {$businessName}\n"
-            . "Location: {$where}\n"
-            . "Search keyword: {$keyword}\n"
-            . "Search radius: {$radius}km\n\n"
-            . "Return ONLY valid JSON (no markdown/backticks) in this shape:\n"
-            . '{"estimated_rank":"e.g. Top 3 / 4-10 / Not in top 10","summary":"2-3 sentence realistic estimate and why","tips":["...","...","..."]}' . "\n"
-            . 'tips = 4 concrete actions to improve local ranking for this keyword.';
+        $prompt = "Estimate Google local rank for \"{$businessName}\" in {$where} for keyword \"{$keyword}\" ({$radius}km).\n"
+            . "Return ONLY JSON: {\"estimated_rank\":\"Top 3/4-10/Not in top 10\",\"summary\":\"2-3 sentences\",\"tips\":[\"4 actions\"]}";
 
-        $raw = $this->ai->generateContent($prompt);
-        $clean = trim(preg_replace('/```json|```/', '', $raw));
-        $parsed = json_decode($clean, true);
-
+        $raw = $this->ai->rawPrompt($prompt, 250);
+        $parsed = null;
+        if ($raw !== null) {
+            $clean = trim(preg_replace('/```json|```/', '', $raw));
+            $parsed = json_decode($clean, true);
+        }
         if (is_array($parsed) && isset($parsed['summary'])) {
             return [
                 'source' => 'ai',

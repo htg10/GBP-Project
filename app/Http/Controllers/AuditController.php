@@ -94,11 +94,11 @@ class AuditController extends Controller
         $grade = $score >= 85 ? 'Excellent' : ($score >= 65 ? 'Good' : ($score >= 40 ? 'Needs work' : 'Poor'));
 
         // --- AI suggestions ---
-        $summary = "Business: {$client->name}. Reviews: {$total}, avg rating {$avg}/5, reply rate {$replyRate}%, "
-            ."negative reviews: {$negative} ({$negativeUnreplied} unreplied). Locations: {$client->locations->count()}.";
-        $aiTips = $this->ai->generateContent(
-            "Based on this Google Business Profile audit, give 3 short, specific action tips to improve local ranking and reputation. Data: {$summary}. Reply as 3 bullet points, no preamble."
-        );
+        $summary = "{$client->name}: {$total} reviews, {$avg}/5 avg, {$replyRate}% replied, {$negativeUnreplied} negative unreplied.";
+        $aiTips = $this->ai->rawPrompt(
+            "Give 3 bullet-point tips to improve this business's Google ranking. {$summary}",
+            150
+        ) ?? 'Reply to all reviews, post weekly updates, keep business info accurate.';
         $this->creditService->deduct($agencyId, $request->user()->id, 'ai_audit', $client->name);
 
         return response()->json([

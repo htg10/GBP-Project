@@ -5,13 +5,6 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * AiService — platform AI engine (Module 3), powered by Google Gemini.
- *
- * If GEMINI_API_KEY is set in .env, real Gemini calls are used. Otherwise
- * (or on any failure) it falls back to deterministic local logic so the app
- * never breaks. Free key: https://aistudio.google.com/app/apikey
- */
 class AiService
 {
     private array $positive = ['wonderful', 'professional', 'spotless', 'clean', 'best', 'great', 'recommend', 'painless', 'patient', 'smooth', 'excellent', 'love', 'good', 'quality', 'friendly', 'helpful'];
@@ -25,54 +18,56 @@ class AiService
     private function geminiUrl(string $model, string $action = 'generateContent'): string
     {
         $base = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:{$action}";
-        return $base.'?key='.urlencode($this->key());
+        return $base . '?key=' . urlencode($this->key());
     }
 
-    private function callGemini(string $prompt): ?string
+    /**
+     * Core Gemini call — accepts per-call maxTokens and temperature.
+     * Thinking is disabled (budget=0) to save output tokens on simple tasks.
+     */
+    private function callGemini(string $prompt, int $maxTokens = 200, float $temperature = 0.7): ?string
     {
         if (! $this->key()) {
             return null;
         }
         try {
-            $model = config('services.gemini.model', 'gemini-2.0-flash');
+            $model = config('services.gemini.model', 'gemini-3.1-flash-lite');
             $url = $this->geminiUrl($model);
 
             $res = Http::timeout(20)
                 ->post($url, [
                     'contents' => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig' => ['temperature' => 0.7, 'maxOutputTokens' => 500],
+                    'generationConfig' => [
+                        'temperature' => $temperature,
+                        'maxOutputTokens' => $maxTokens,
+                        'thinkingConfig' => ['thinkingBudget' => 0],
+                    ],
                 ]);
 
             if (! $res->successful()) {
-                Log::warning('Gemini API returned '.$res->status().'; using local fallback. Body: '.$res->body());
+                Log::warning('Gemini API returned ' . $res->status() . '; using local fallback. Body: ' . $res->body());
                 return null;
             }
 
             $text = $res->json('candidates.0.content.parts.0.text');
             return is_string($text) ? trim($text) : null;
         } catch (\Throwable $e) {
-            Log::warning('Gemini call failed: '.$e->getMessage().'; using local fallback.');
+            Log::warning('Gemini call failed: ' . $e->getMessage() . '; using local fallback.');
             return null;
         }
     }
 
+    /**
+     * Sentiment — uses local keyword matching only (no AI call needed).
+     * Saves API cost entirely; keyword matching is accurate enough for
+     * POSITIVE/NEUTRAL/NEGATIVE classification.
+     */
     public function analyzeSentiment(string $text): string
     {
         $clean = trim($text);
         if ($clean === '') {
             return 'NEUTRAL';
         }
-
-        if ($this->key()) {
-            $out = $this->callGemini(
-                "Classify the sentiment of this customer review as exactly one word: POSITIVE, NEUTRAL, or NEGATIVE. Reply with only that word.\n\nReview: \"{$clean}\""
-            );
-            $norm = strtoupper((string) $out);
-            if (str_contains($norm, 'POSITIVE')) return 'POSITIVE';
-            if (str_contains($norm, 'NEGATIVE')) return 'NEGATIVE';
-            if (str_contains($norm, 'NEUTRAL')) return 'NEUTRAL';
-        }
-
         return $this->localSentiment($clean);
     }
 
@@ -97,7 +92,8 @@ class AiService
 
         if ($this->key()) {
             $out = $this->callGemini(
-                "You are a friendly business owner replying to a Google review. Write a short, warm, professional reply (2-3 sentences). Address the reviewer by first name. No hashtags or emojis.\n\nReviewer: {$name}\nRating: {$starRating}/5\nReview: \"{$comment}\"\n\nReply:"
+                "Reply to this Google review as the business owner. 2-3 sentences, warm, professional, no emojis.\nReviewer: {$name}\nRating: {$starRating}/5\nReview: \"{$comment}\"",
+                150
             );
             if ($out) return $out;
         }
@@ -116,7 +112,8 @@ class AiService
     {
         if ($this->key()) {
             $out = $this->callGemini(
-                "You are a social media copywriter for small businesses. {$prompt}. Keep it engaging and concise. Include relevant hashtags only if appropriate."
+                "Write a short social media post for a small business. {$prompt}. Keep it concise with relevant hashtags.",
+                200
             );
             if ($out) return $out;
         }
@@ -124,17 +121,21 @@ class AiService
     }
 
     /**
-     * AI Mode chat — a marketing assistant for the agency.
-     * Returns ['reply' => '...', 'source' => 'ai'|'fallback'].
+     * Raw prompt — no persona wrapper. Used by controllers that need
+     * structured/JSON output (audit, competitor, rank-checker).
      */
+    public function rawPrompt(string $prompt, int $maxTokens = 300): ?string
+    {
+        return $this->callGemini($prompt, $maxTokens, 0.5);
+    }
+
     public function chat(string $message): array
     {
         if ($this->key()) {
-            $prompt = "You are ReviewFlow AI, a helpful marketing assistant for local businesses and agencies. "
-                ."You help with Google reviews, replies, social media posts, local SEO, lead follow-ups, and general marketing advice. "
-                ."Keep answers practical, friendly, and concise. If asked to write something, write it ready-to-use.\n\n"
-                ."User: {$message}";
-            $out = $this->callGemini($prompt);
+            $out = $this->callGemini(
+                "You are ReviewFlow AI, a marketing assistant for local businesses. Help with Google reviews, social media, local SEO, and marketing advice. Be practical and concise.\n\nUser: {$message}",
+                400
+            );
             if ($out) {
                 return ['reply' => $out, 'source' => 'ai'];
             }
@@ -146,12 +147,6 @@ class AiService
         ];
     }
 
-    /**
-     * Generate an image from a text prompt using Gemini's image-generation
-     * model. Returns ['success'=>bool, 'data_uri'=>string, 'source'=>'ai'|'fallback'].
-     * On no key / any failure, returns a placeholder SVG (as a data: URI) so
-     * the gallery always has something to show instead of erroring out.
-     */
     public function generateImage(string $prompt): array
     {
         if ($this->key()) {
@@ -176,7 +171,7 @@ class AiService
                 ]);
 
             if (! $res->successful()) {
-                Log::warning('Gemini image API returned '.$res->status().'; using placeholder. Body: '.$res->body());
+                Log::warning('Gemini image API returned ' . $res->status() . '; using placeholder. Body: ' . $res->body());
                 return null;
             }
 
@@ -191,44 +186,35 @@ class AiService
             Log::warning('Gemini image API returned no inline image data.');
             return null;
         } catch (\Throwable $e) {
-            Log::warning('Gemini image call failed: '.$e->getMessage());
+            Log::warning('Gemini image call failed: ' . $e->getMessage());
             return null;
         }
     }
 
-    /** A generated-on-the-fly placeholder so the gallery never shows a broken image. */
     private function placeholderImage(string $prompt): string
     {
         $label = trim(mb_substr($prompt, 0, 60)) ?: 'AI image';
         $bg = ['#0f6b5c', '#c2790a', '#b23a48', '#2a5a8a'][crc32($prompt) % 4];
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">'
-            .'<rect width="100%" height="100%" fill="'.$bg.'"/>'
-            .'<text x="50%" y="46%" font-family="sans-serif" font-size="22" fill="#fff" text-anchor="middle">✦ Preview unavailable</text>'
-            .'<text x="50%" y="56%" font-family="sans-serif" font-size="14" fill="#e8e6dd" text-anchor="middle">'.htmlspecialchars($label).'</text>'
-            .'</svg>';
+            . '<rect width="100%" height="100%" fill="' . $bg . '"/>'
+            . '<text x="50%" y="46%" font-family="sans-serif" font-size="22" fill="#fff" text-anchor="middle">✦ Preview unavailable</text>'
+            . '<text x="50%" y="56%" font-family="sans-serif" font-size="14" fill="#e8e6dd" text-anchor="middle">' . htmlspecialchars($label) . '</text>'
+            . '</svg>';
 
-        return 'data:image/svg+xml;base64,'.base64_encode($svg);
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    /**
-     * Suggest local-SEO keywords for a business.
-     * Returns ['source' => 'ai'|'fallback', 'groups' => [...]].
-     * Uses Gemini for real suggestions; falls back to a template if no key / limit hit.
-     */
     public function generateKeywords(string $business, string $city, ?string $industry = null): array
     {
-        $industryLine = $industry ? " in the {$industry} industry" : '';
+        $industryLine = $industry ? " ({$industry})" : '';
 
         if ($this->key()) {
-            $prompt = "You are a local SEO expert. Suggest Google search keywords a customer would use to find this business, for local ranking.\n"
-                ."Business: {$business}{$industryLine}\nCity: {$city}\n\n"
-                ."Return ONLY valid JSON (no markdown, no backticks) in exactly this shape:\n"
-                .'{"groups":[{"group":"High intent","keywords":["..."]},{"group":"Local","keywords":["..."]},{"group":"Long-tail","keywords":["..."]},{"group":"Services","keywords":["..."]}]}'."\n"
-                ."Give 5-7 keywords per group. Keywords must be realistic search phrases including the city where natural.";
+            $prompt = "Suggest Google search keywords for: {$business}{$industryLine} in {$city}.\n"
+                . "Return ONLY valid JSON: {\"groups\":[{\"group\":\"High intent\",\"keywords\":[\"...\"]},{\"group\":\"Local\",\"keywords\":[\"...\"]},{\"group\":\"Long-tail\",\"keywords\":[\"...\"]},{\"group\":\"Services\",\"keywords\":[\"...\"]}]}\n"
+                . "5-7 keywords per group, include city name.";
 
-            $raw = $this->callGemini($prompt);
+            $raw = $this->callGemini($prompt, 300, 0.6);
             if ($raw) {
-                // Strip accidental code fences.
                 $clean = trim(preg_replace('/```json|```/', '', $raw));
                 $data = json_decode($clean, true);
                 if (is_array($data) && isset($data['groups']) && is_array($data['groups'])) {
@@ -237,7 +223,6 @@ class AiService
             }
         }
 
-        // Local fallback (no key or parse failed / rate-limited) — templated keywords.
         $b = strtolower($industry ?: $business);
         return ['source' => 'fallback', 'groups' => [
             ['group' => 'High intent', 'keywords' => ["best {$b} in {$city}", "{$b} near me", "top rated {$b} {$city}", "affordable {$b} {$city}"]],
