@@ -117,7 +117,7 @@ class AiService
             );
             if ($out) return $out;
         }
-        return "Draft based on: \"{$prompt}\". (Set GEMINI_API_KEY in your .env for live AI generation.)";
+        return "Draft based on: \"{$prompt}\". Please try again in a moment.";
     }
 
     /**
@@ -142,7 +142,7 @@ class AiService
         }
 
         return [
-            'reply' => "I couldn't reach the AI right now (check your GEMINI_API_KEY, or you may have hit the free rate limit — wait ~30 seconds and try again).",
+            'reply' => "I couldn't process your request right now. Please try again in a moment.",
             'source' => 'fallback',
         ];
     }

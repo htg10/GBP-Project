@@ -56,9 +56,6 @@
     <span class="badge teal" style="white-space:nowrap;font-size:12px;padding:5px 14px;">{{ \App\Services\CreditService::COSTS['ai_media_generate'] }} Credits / Image</span>
 </div>
 
-@if(!config('services.gemini.key'))
-    <div class="alert info">No GEMINI_API_KEY set — generated images will be placeholders. Add a key to your .env for real AI images.</div>
-@endif
 
 {{-- Generate form + Preview layout --}}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;" id="gen-section">

@@ -100,7 +100,7 @@ class RankCheckerController extends Controller
             'keyword' => $keyword,
             'radius_km' => $radius,
             'estimated_rank' => 'Unavailable',
-            'summary' => 'Add GOOGLE_PLACES_API_KEY to your .env for a real ranking check, or set GEMINI_API_KEY for an AI estimate.',
+            'summary' => 'Ranking estimate is temporarily unavailable. Please try again in a moment.',
             'tips' => ['Keep your Business Profile fully filled out', 'Collect and reply to reviews regularly', 'Post updates on Google weekly', 'Use the keyword in your business description'],
         ];
     }

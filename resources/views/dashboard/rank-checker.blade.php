@@ -95,17 +95,12 @@ function render(d){
         return;
     }
 
-    // AI-estimated fallback
-    const badge = d.source === 'ai'
-        ? '<span class="badge amber">✨ AI estimate (not live Google data)</span>'
-        : '<span class="badge gray">⚡ Limited</span>';
+    const badge = '';
     let html = '<div class="card" style="margin-bottom:14px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>' + escapeHtml(d.business) + '</strong>' + badge + '</div>'
         + '<div style="font-size:22px;font-weight:700;color:var(--teal);margin:8px 0;">' + escapeHtml(d.estimated_rank) + '</div>'
         + '<p style="font-size:13.5px;line-height:1.6;color:#2a3a35;border-top:1px solid var(--line);padding-top:10px;">' + escapeHtml(d.summary||'') + '</p>';
-    if (!d.results) {
-        html += '<div style="font-size:12px;color:var(--muted);margin-top:10px;">For real ranking data (not an estimate), add GOOGLE_PLACES_API_KEY to your .env.</div>';
-    }
+    if (false) { /* placeholder */ }
     html += '</div>';
 
     if (d.tips && d.tips.length) {

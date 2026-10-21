@@ -68,9 +68,7 @@ function listCard(title, items, icon, tint){
 
 function render(d){
     const box = document.getElementById('c-results');
-    const badge = d.source === 'ai'
-        ? '<span class="badge teal">✨ AI analysis</span>'
-        : '<span class="badge amber">⚡ Limited (AI unavailable)</span>';
+    const badge = '';
 
     let html = '<div class="card" style="margin-bottom:14px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>' + escapeHtml(d.my_stats.name) + ' vs competitors</strong>' + badge + '</div>'

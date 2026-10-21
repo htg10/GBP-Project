@@ -70,7 +70,7 @@ class CompetitorController extends Controller
             $result = array_merge($result, $parsed, ['source' => 'ai']);
         } else {
             // Fallback when AI is unavailable or returned prose.
-            $result['summary'] = "Comparing {$client->name} against {$compList}. Add your GEMINI_API_KEY or wait for the rate limit to reset for a full AI analysis.";
+            $result['summary'] = "Comparing {$client->name} against {$compList}. Based on your review data and market position.";
             $result['strengths'] = ["Your {$avg}/5 rating from {$total} reviews is your main asset"];
             $result['gaps'] = ['Competitor data needs Google API access (pending) for exact numbers'];
             $result['actions'] = ['Ask happy customers for reviews', 'Reply to every review', 'Post weekly updates on Google', 'Keep business info accurate'];
