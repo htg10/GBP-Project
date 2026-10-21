@@ -81,11 +81,7 @@ class RankCheckerController extends Controller
             ."Return ONLY JSON: {\"estimated_rank\":\"Top 3/4-10/Not in top 10\",\"summary\":\"2-3 sentences\",\"tips\":[\"4 actions\"]}";
 
         $raw = $this->ai->rawPrompt($prompt, 250);
-        $parsed = null;
-        if ($raw !== null) {
-            $clean = trim(preg_replace('/```json|```/', '', $raw));
-            $parsed = json_decode($clean, true);
-        }
+        $parsed = $raw ? $this->ai->extractJson($raw) : null;
         if (is_array($parsed) && isset($parsed['summary'])) {
             return [
                 'source' => 'ai',

@@ -80,8 +80,8 @@ class RankCheckerController extends Controller
             . '{"estimated_rank":"e.g. Top 3 / 4-10 / Not in top 10","summary":"2-3 sentence realistic estimate and why","tips":["...","...","..."]}' . "\n"
             . 'tips = 4 concrete actions to improve local ranking for this keyword.';
 
-        $raw = $this->ai->generateContent($prompt);
-        $parsed = $this->ai->extractJson($raw);
+        $raw = $this->ai->rawPrompt($prompt, 300);
+        $parsed = $raw ? $this->ai->extractJson($raw) : null;
         if (is_array($parsed) && isset($parsed['summary'])) {
             return [
                 'source' => 'ai',
