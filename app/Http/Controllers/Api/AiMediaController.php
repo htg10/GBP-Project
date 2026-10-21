@@ -15,6 +15,26 @@ class AiMediaController extends Controller
 {
     public function __construct(private AiService $ai, private CreditService $creditService) {}
 
+    public function index(Request $request)
+    {
+        $agencyId = $request->user()->agency_id;
+        $clientId = $request->user()->client_id;
+
+        $items = AiMedia::where('agency_id', $agencyId)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->latest()
+            ->take(30)
+            ->get();
+
+        return response()->json($items->map(fn ($m) => [
+            'id' => $m->id,
+            'prompt' => $m->prompt,
+            'image_data' => $m->image_data,
+            'source' => $m->source,
+            'created_at' => $m->created_at?->format('d M Y, h:i A'),
+        ]));
+    }
+
     public function generate(Request $request)
     {
         $data = $request->validate([

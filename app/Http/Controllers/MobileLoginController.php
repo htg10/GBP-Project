@@ -23,6 +23,14 @@ class MobileLoginController extends Controller
         $sub = $user->agency?->subscription;
         $dest = (!$sub || $sub->status === 'TRIALING') ? route('plans') : route('dashboard');
 
+        // Mobile app ka ek-time login link kabhi-kabhi ek specific page par continue
+        // karna chahta hai (jaise Google connect). "next" sirf ek safe, local,
+        // whitelisted path ho sakta hai — kisi aur domain par redirect nahi hota.
+        $next = $request->query('next');
+        if (is_string($next) && preg_match('#^/clients/\d+/(google|meta)/connect(\?.*)?$#', $next)) {
+            return redirect($next);
+        }
+
         return redirect()->intended($dest);
     }
 }

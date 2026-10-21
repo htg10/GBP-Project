@@ -40,6 +40,7 @@ Route::get('/shipping-policy', fn() => view('policies.shipping'))->name('policy.
 Route::get('/terms-and-conditions', fn() => view('policies.terms'))->name('policy.terms');
 Route::get('/privacy-policy', fn() => view('policies.privacy'))->name('policy.privacy');
 Route::get('/cancellation-refund-policy', fn() => view('policies.refund'))->name('policy.refund');
+Route::get('/delete-account', fn() => view('policies.delete-account'))->name('policy.delete-account');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

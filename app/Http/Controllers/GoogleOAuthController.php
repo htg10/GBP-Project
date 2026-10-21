@@ -34,12 +34,20 @@ class GoogleOAuthController extends Controller
     {
         abort_unless($client->agency_id === $request->user()->agency_id, 403);
 
+        // Mobile app ke flow mein error ke baad wapas "back()" se bhejna theek nahi
+        // (mobile browser session mein koi meaningful "previous page" nahi hota),
+        // isliye mobile requests ke liye hamesha app ke custom scheme par redirect karte hain.
+        $isMobile = $request->boolean('mobile');
+        $mobileError = fn (string $message) => redirect('eydia://google-connected?status=error&message=' . urlencode($message));
+
         if (! $request->user()->email_verified_at) {
-            return back()->with('error', 'Please verify your email address before connecting Google Business Profile.');
+            $message = 'Please verify your email address before connecting Google Business Profile.';
+            return $isMobile ? $mobileError($message) : back()->with('error', $message);
         }
 
         if (! $this->configured()) {
-            return back()->with('error', 'Google is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env first.');
+            $message = 'Google is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env first.';
+            return $isMobile ? $mobileError($message) : back()->with('error', $message);
         }
 
         // "state" protects against CSRF and remembers which client we're connecting.
@@ -50,6 +58,7 @@ class GoogleOAuthController extends Controller
         Cache::put('gauth_'.$state, [
             'client_id' => $client->id,
             'agency_id' => $request->user()->agency_id,
+            'mobile' => $isMobile,
         ], now()->addMinutes(15));
 
         $params = http_build_query([
@@ -68,20 +77,28 @@ class GoogleOAuthController extends Controller
     // Step 2 — Google redirects back here with a code.
     public function callback(Request $request)
     {
-        if ($request->filled('error')) {
-            return redirect()->route('clients')->with('error', 'Google connection was cancelled.');
-        }
-
-        // Verify state matches what we stored in the cache.
+        // Pulled once up front so every exit path (including "user cancelled")
+        // knows whether this was the app's flow and can send the browser back
+        // to the app instead of the web dashboard.
         $state = $request->query('state');
         $stored = $state ? Cache::pull('gauth_'.$state) : null;
+        $isMobile = $stored['mobile'] ?? false;
+        $mobileError = fn (string $message) => redirect('eydia://google-connected?status=error&message=' . urlencode($message));
+
+        if ($request->filled('error')) {
+            $message = 'Google connection was cancelled.';
+            return $isMobile ? $mobileError($message) : redirect()->route('clients')->with('error', $message);
+        }
+
         if (! $stored) {
-            return redirect()->route('clients')->with('error', 'Invalid state. Please try connecting again.');
+            $message = 'Invalid state. Please try connecting again.';
+            return $isMobile ? $mobileError($message) : redirect()->route('clients')->with('error', $message);
         }
 
         $client = Client::find($stored['client_id']);
         if (! $client || $client->agency_id !== $stored['agency_id']) {
-            return redirect()->route('clients')->with('error', 'Client not found.');
+            $message = 'Client not found.';
+            return $isMobile ? $mobileError($message) : redirect()->route('clients')->with('error', $message);
         }
 
         // Exchange the authorization code for tokens.
@@ -94,8 +111,10 @@ class GoogleOAuthController extends Controller
         ]);
 
         if (! $res->successful()) {
-            return redirect()->route('clients.show', $client)
-                ->with('error', 'Could not get token from Google: '.$res->body());
+            $message = 'Could not get token from Google: '.$res->body();
+            return $isMobile
+                ? $mobileError('Could not get token from Google.')
+                : redirect()->route('clients.show', $client)->with('error', $message);
         }
 
         $tokens = $res->json();
@@ -110,6 +129,10 @@ class GoogleOAuthController extends Controller
                 'meta' => ['scope' => $tokens['scope'] ?? null],
             ]
         );
+
+        if ($isMobile) {
+            return redirect('eydia://google-connected?status=success&client=' . $client->id);
+        }
 
         return redirect()->route('clients.show', $client)
             ->with('success', 'Google connected! You can now sync reviews for this client.');

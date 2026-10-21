@@ -183,17 +183,11 @@ class ClientController extends Controller
             $locations = $gbp->listLocations($integration, $account['name']);
             foreach ($locations as $loc) {
                 GbpLocation::updateOrCreate(
-                    ['google_name' => $loc['name']],
+                    ['google_name' => $loc['google_name']],
                     [
-                        'agency_id' => $request->user()->agency_id,
                         'client_id' => $client->id,
-                        'title' => $loc['title'] ?? $loc['name'],
+                        'title' => $loc['title'] ?? $loc['google_name'],
                         'address' => $loc['address'] ?? null,
-                        'phone' => $loc['phone'] ?? null,
-                        'website' => $loc['website'] ?? null,
-                        'latitude' => $loc['latitude'] ?? null,
-                        'longitude' => $loc['longitude'] ?? null,
-                        'place_id' => $loc['placeId'] ?? null,
                     ]
                 );
                 $imported++;
@@ -205,6 +199,22 @@ class ClientController extends Controller
             ->delete();
 
         return response()->json(['success' => true, 'imported' => $imported]);
+    }
+
+    public function disconnectGoogle(Request $request, Client $client)
+    {
+        $this->authorizeClient($request, $client);
+        Integration::where('client_id', $client->id)->where('provider', 'GOOGLE_GBP')->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function disconnectMeta(Request $request, Client $client)
+    {
+        $this->authorizeClient($request, $client);
+        Integration::where('client_id', $client->id)->where('provider', 'META_GRAPH')->delete();
+
+        return response()->json(['success' => true]);
     }
 
     private function authorizeClient(Request $request, Client $client): void
