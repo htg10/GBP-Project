@@ -5,7 +5,8 @@
 <p class="updated">Last updated: {{ date('d M Y') }}</p>
 
 <h2>1. Introduction</h2>
-<p>ReviewFlow ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
+<p>This Privacy Policy applies to the <strong>Eydia</strong> mobile app (Android package <strong>com.heltog.review_flow</strong>) and the ReviewFlow web platform at review.heltog.com (together, the "Platform"). The Platform is published and operated by <strong>Pizi India Pvt Ltd</strong> ("we", "us", "our"), also trading as Heltog, India.</p>
+<p>We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Eydia app or the ReviewFlow website.</p>
 
 <h2>2. Information We Collect</h2>
 <p><strong>Information you provide:</strong></p>
@@ -87,5 +88,5 @@
 <p>We may update this Privacy Policy from time to time. We will notify you of material changes via email or in-app notification. Your continued use of the Platform after changes take effect constitutes acceptance.</p>
 
 <h2>11. Contact</h2>
-<p>For privacy-related inquiries or to exercise your data rights, contact us at <a href="mailto:support@reviewflow.in">support@reviewflow.in</a>.</p>
+<p>For privacy-related inquiries or to exercise your data rights, contact Pizi India Pvt Ltd (developer of the Eydia app) at <a href="mailto:eydia@gmail.com">eydia@gmail.com</a>. To delete your account and data, see <a href="{{ route('policy.delete-account') }}">Delete Your Account</a>.</p>
 @endsection
